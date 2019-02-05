@@ -1,0 +1,205 @@
+---
+title: "guideR user's guide"
+author: "David Brocks"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{guideR}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+# Introduction
+CRISPR-Cas9 (Clustered Regularly Interspaced Short Palindromic Repeats) nucleases have become the method of choice for genome editing and modulation of gene expression. 
+
+## guideRNA scoring
+To define the binding affinity of a guide to its genomic target, we modified the scoring formula from *Breaking-Cas* (REF) which assigns a score based on the total number and invidivual positions of the guides' mismatches:
+$$ S_{bind} = \prod_{p\in{M}}(W_p)\times\frac{1}{\frac{guide\_length-d}{guide\_length}\ + 1}\times\frac{1}{m^{2}} $$
+Where *Wp* is the weight of a mismatch at position *p* (linear decrease with distance to PAM), *m* is the total number of mismatches, and *d* is a proxy for the average pairwise distance between all mismatches:
+$$d = \frac{max\_pos - min\_pos}{m - 1}$$
+Perfectly complementary binding sites are scored with a value of 1, while binding sites with a single mismatch will reduce binding score by at least 0.5. This scoring scheme is consistent with emperical data from (REF).
+
+We further score the impact of predicted genomic off-target sites by their basepair distance to the nearest cis-regulatory element (*cis*):
+$$S_{cis} = {Top} + \frac{(Bottom - Top)}{1 + exp(\frac{V50 - cis}{Slope\times100})}$$
+This equation describes the Boltzmann sigmoid function, where V50 is the basepair distance at which the score is halfway between Top (1) and Bottom (0.1) (2kb by default) and slope represents the steepness of the sigmoid curve (5 by default). 
+The final off-target score for a predicted off-target binding site is defined as the product of both scores:
+$$ S_{off} = S_{bind}\times S_{cis} $$
+while the on target score of an on-target binding site is simply defined as:
+$$ S_{on} = S_{bind} $$
+We then summarise the on- and off-target scores for a guide (*Sguide_off* and *Sguide_on*) over all predicted off- and on-target binding sites (Soff and Son) by first calculating the maximal score of a locus _l_ and guide _g_: 
+$$ Slocus_{on}(l,g) = \max_{b\in B_{l}} S_{on} $$
+$$ Slocus_{off}(l,g) = \max_{b\in B_{l}} S_{off} $$
+where *Bl* is the set of all the on/off-target binding sites of locus *l*. A Locus is defined as either the full-length transposon interval (variable size) or a genomic bin of size 250 bps by default. The total off- and on-target score of a guide is then simply defined as:
+$$ Sguide_{on}(g) = \sum\limits_{l\in L_{on}} Slocus_{on}(l,g) $$
+$$ Sguide_{off}(g) = \sum\limits_{l\in L_{off}} Slocus_{off}(l,g) $$
+Similarly, off- and on-target scores for combinations of guides (*Scomb*) are summarized for each locus l and guide g:
+$$ Scomb_{off}(c) = \sum\limits_{l\in L_{off}} \max_{g\in G} Slocus_{off}(l,g)  $$
+$$ Scomb_{on}(c) = \sum\limits_{l\in L_{on}} \max_{g\in G} Slocus_{on}(l,g)  $$
+
+# Workflow
+In this tutorial, we are going to design guideRNAs against long terminal repeats (LTRs) originating from the human endogenous retrovirus 9. By following this workflow, you will understand the basic steps of the __guideR__ package and learn how to adapt them to your custom requirements.
+
+## Getting started
+
+### Genome assembly
+__guideR__ requires the genome assembly of your organism of choice stored as a _BSgenome_ object. You can retrieve the full list of available _BSgenome_ objects by typing `BSgenome::available.genomes()` or create and install a custom _BSgenome_ object following the instructions of the _BSgenome_ vignette. 
+
+Since we are designing guideRNAs against LTRs of the human genome, we will first install the UCSC hg38 assembly.
+```{r, eval = FALSE}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("BSgenome.Hsapiens.UCSC.hg38")
+```
+
+To load __guideR__ and the human hg38 _BSgenome_ into your R environment type:
+```{r, warning = FALSE, message = FALSE}
+#library(guideR)
+devtools::load_all('/home/davidbr/src/guideR', export_all = FALSE)
+devtools::load_all('/home/davidbr/src/guideR.data')
+library(BSgenome.Hsapiens.UCSC.hg38)
+```
+
+### Genome annotation
+In addition to the assembled genome sequence, __guideR__ requires genomic coordinates of transposable elements (mandatory) and cis regulatory features (optional). A convient solution is to download transposon coordinates using the [UCSC table browser](https://genome.ucsc.edu/cgi-bin/hgTables) by selecting your genome of choice, group = Repeats, track = RepeatMasker, and output format = all fields from selected table. You can provide other annotation as long as it provides the basic information about chromosome, start, end, strand, and a transposon identifier (e.g. repname). In this tutorial, we will show you how to import such information using the provided example datasets. 
+
+### Bowtie aligner
+__guideR__ uses a R implementation of the short read aligner [Bowtie](http://bowtie-bio.sourceforge.net/index.shtml) to map potential guideRNAs against the genome. Bowtie requires a FM index based on the Burrows-Wheeler transform to do so. 
+In case __guideR__ does not find the corresponding bowtie index files to your chosen genome, it will automatically create them. Since this can be quite time consuming (couple of hours), we recommend to [download](ftp://ftp.ccb.jhu.edu/pub/data/bowtie_indexes/) the appropriate index files (if available), rename them following the format (BSgenome + suffix, see below) and place the files into the ?? directory.
+
+Example naming of the human hg38 bowtie indeces:  
+
+ * BSgenome.Hsapiens.UCSC.hg38.1.ebwt  
+ * BSgenome.Hsapiens.UCSC.hg38.2.ebwt  
+ * BSgenome.Hsapiens.UCSC.hg38.3.ebwt (not required)  
+ * BSgenome.Hsapiens.UCSC.hg38.4.ebwt (not required)  
+ * BSgenome.Hsapiens.UCSC.hg38.rev.1.ebwt  
+ * BSgenome.Hsapiens.UCSC.hg38.rev.2.ebwt  
+
+## Creating a guideSet
+We start the workflow by creating a _guideSet_ object, which is a S4 class to store genomic information and the results of later functions.
+
+To create a new _guideSet_ object, we have to define the genome assembly and provide annotation on transposable elements and cis regulatory features (e.g. promoters/enhancers) which is optional but highly recommended for optimal guideRNA design. In this tutorial, we will use the hg38 UCSC repeatmasker and FANTOM5 TSS annotation provided with the __guideR__ package.
+```{r}
+Sys.time()
+tss_path <- system.file(package = 'guideR', 'extdata', 'hg38_fair+new_CAGE_peaks_phase1and2.bed.gz')
+repeats_path <- system.file(package = 'guideR', 'extdata', 'hg38_ucsc_rmsk_ltr.txt.gz')
+
+gs <- createGuideSet(genome = Hsapiens, # Hsapiens is the short version of BSgenome.Hsapiens.UCSC.hg38
+                     tes = repeats_path, # can be either path to file or GRanges object)
+                     cis = tss_path) # can be either path to file or GRanges object) 
+gs                     
+```
+! TO DO move blacklisting here?
+
+## Adding target loci
+To add target sites to our previously created _guideSet_, we can either provide the names of the repeat families we wish to target or a GRanges object with coordinates of the transposable elements.
+
+To get the full list of available repeat families (including simple repeats) we can type `listFamilies(gs, low_complexity = TRUE)`.
+
+The LTRs originating from the human endogenous retrovirus 9 all conveniently share a common 'LTR12' prefix (Note: The _Dfam_ database allows open access to transposon genetic relationships, e.g. http://dfam.org/entry/DF0000399/relationships), allowing us to retrieve all its members by using a simple grep command:
+```{r}
+families <- grep('LTR12', listFamilies(gs), value = TRUE)
+families
+```
+
+We now add these families as targets to our previously generated _guideSet_, and blacklist any copies that are within 1000 basepair distance to the nearest transcription start site.
+```{r, warning = FALSE, message = FALSE}
+gs <- addTargets(gs, 
+                 targets = families, 
+                 blacklist = TRUE,
+                 min_dist = 1000) 
+gs
+```
+
+To inspect targeted families more closely or to design guideRNAs against specific parts of the families' consensus model, we can compute or import multiple sequence alignments. __guideR__ computes a rough multiple sequence alignment by weighted sampling from a families' total genomic sequences. While this approach is fast and usually sufficient to generate a representative consensus model, it might fail for highly polymorphic families. Therefore, __guideR__ also supports importing pre-computed multiple sequence alignments stored in fasta format. To import several such alignments, we first need to create a data.frame containing the family identifier of the alignment and the corresponding file's location:
+```{r, warning = FALSE}
+# Path to data directory containg multiple sequence alignment files
+data_dir <- system.file(package = 'guideR', 'extdata')
+# Return paths to files ending with *.fasta.gz in that data directory
+msa_files <- dir(data_dir, full = TRUE, pattern = 'fasta.gz$')
+# Create data.frame with repname and corresponding file path
+msa_df <- data.frame('repname' = c('LTR12C', 'LTR12D'), 'path' = msa_files)
+msa_df
+
+gs <- addAlignments(gs, # our guideSet
+                    files = msa_df, # our data.frame
+                    max_gap_freq = 0.8) # Removes columns with more than 80% gaps in the alignment
+```
+
+Having added the targets and alignments to our _guideSet_, we can now generate several QC reports and inspect the targeted families more closely:
+```{r, fig.width = 7, fig.height=7, fig.align='center', warning = FALSE, message = FALSE}
+gs <- plotTargets(gs) # generates, stores QC plots in guideSet and prints them to screen
+gs
+```
+
+The output generates general statistics on selected families and optional information that requires a multiple sequence alignment (see `?plotTargets` for full annotation of the panels). As we can see from the figures, members of the LTR12C family are by far most prevalent and largest in size (panels __a__ to __c__). Since we also calculated and added alignments, the output further visualizes the multiple sequence alignment (__d__), the density of CpG dinucleotides across it (__e__) and includes information on putative consensus transcription start sites (TSSs) (__f__). We can use this information for example, to optimize the design of our guideRNAs by targeting CpG dense regions close to the putative TSS.
+
+## Adding guideRNAs
+After we are satisfied with the loci/families we wish to target, we continue to compute all possible guideRNAs fulfilling any user-defined criteria (e.g. GC content, PAM, target/off-target score, or binding position on consensus models). In this tutorial, we will restrict ourselves to the design of 19 bp guideRNAs with a 3' NGG PAM. We further tell __guideR__ to score guides based on their binding to CpG dense parts of the LTR12C and LTR12D families. 
+
+For that purpose, we have to first create a simple data.frame providing coordinates on the consensus we wish to target. Note that the `plotTargets()` report can assist you in deciding what start and end coordinates to supply.
+```{r}
+consensus_df <- data.frame('repname' = c('LTR12C', 'LTR12D'), 'start' = c(1, 1), end = c(600, 500))
+```
+
+We then call the `addGuides()` function to compute our guide universe. More specifically, this function first calculates the entire 19mer (in our scenario) universe of specified targets, selects kmers with proper PAM sequence, and finds and annotates their putative genomic binding sites. Since most kmers are genetically similar and hence show redundanct binding profiles, __guideR__ finally clusters kmers into groups with homogenous binding profiles and marks the best kmer per cluster (the number of groups and selection procedure can be specified with the `n_clust` and `method` arguments of the `addGuides()` function). Depending on the target sequence complexity, guideRNA length, and allowed mismatches, the computation may take a while.
+
+```{r, warning = FALSE, message = FALSE}
+gs <- addGuides(gs, # our guideSet
+                n_mismatches = 2, # higher number of mismatches significantly reduces efficiency
+                guide_length = 19, # length of the guideRNAs to design
+                min_Son = 50, # only guides with a minimum score of 50 are considered
+                max_Soff = 20, # only guides with a off score less than 50 are considered
+                consensus_range = consensus_df, # restrict guideRNA design to parts on consensus
+                gc_content = c(0.4, 0.8), # guides GC content. Between 40 - 80% recommended (REF)
+                n_clust = 15, # number of clusters for guideRNA grouping
+                method = 'max', # guides with max on-targets are selected per clust
+                PAM = 'NGG') # currently only NGG PAM is supported
+```
+
+We can now generate a QC report and sanity check the results by entering:
+```{r, fig.width = 7, fig.height=12, fig.align='center', warning = FALSE, message = FALSE}
+gs <- plotGuides(gs)
+```
+?? Add plot about kmer universe complexity, i.e. distribution of hamming distances?
+
+We can see from the report that while most of the ~30,000 potential guides have the desired GC content, only a minority passes our minimal score requirements (__a__ - __c__). Panel __d__ shows the Sbind score distribution by the total number of mismatches of a guide's genomic complement and __e__ summarizes the frequency of off-targets by their basepair distance to the nearest cis regulatory element. The dotted red line indicates the conversion of basepair distances to the corresponding cis score (Scis) of a binding site. Panels __f__ and __g__ show the clustering of guideRNAs by their target binding profile and selection of the best guide per cluster, respectively. For full annotation of the panels, we refer to the documentation page of the `plotGuides` function.
+
+To adjust the guide selection or clustering steps, you can use the `selGuides` or `clustGuides` functions, respectively.
+
+
+## Calculating guide combinatorics
+Multiplexing of several distinct guideRNAs for combined delivery may maximize recruitment of dCAS9 to polymorphic multi-copy families, as recently shown for human LTR5HS elements (REF). However, selecting the optimal set of guideRNAs for maximal on- and minimal off-targeting can be challenging. __guideR__ computes the binding profiles of all possible combinations of previously selected guide representatives, i.e. the best guide per cluster and finds the optimal combination under user-defined constrains.
+
+We calculate binding profiles of all possible combinations for up to 8 distinct guides by typing:
+```{r}
+gs <- addCombinations(gs, # our guideSet
+                      n_guides = 8, # maximal number of guides to consider
+                      method = 'max') # combinations with max on-targets are selected
+```
+
+Having added the combinded binding statistics to our _guideSet_, we can inspect them by entering:
+```{r, fig.width = 7, fig.height = 12, fig.align = 'center', warning = FALSE, message = FALSE}
+gs <- plotCombinations(gs)
+```
+
+The table in panel __a__ summarizes the on- and off-targets per guide combination. We can see that the on-target binding score plateaus for around ?5? distinct guides (__b__ and __c__), meaning the addition of further guides to the delivery construct provides little extra predicted target coverage. Panels __d__ and __e__ summarize off-target binding coverage by genomic feature and distance to the nearest cis regulatory element, respectively. The target loci coverage per number of guides is shown in panel (__f__). Note how some loci are covered by more than one binding site. Panel __g__ shows the predicted binding position along the consensus sequences (in 250 bp bins) by the number of guides. Full annotation of the panels can be found in the documentation of the `plotCombinations` function.
+
+## Exporting the results
+We can finally save the relevant results and plots of our guideSet to a specified directory:
+```{r, eval = TRUE}
+export(gs,
+       outdir = tempdir(), 
+       dpi = 320, # image resolution,
+       workspace = FALSE) # don't save guideSet as workspace
+Sys.time()
+```
+
+Executing the command will create a subdirectory in the specified outdir (or current working directory if `force = TRUE`) and writes all output files to it. 
+```{r, eval = FALSE}
+knitr::include_graphics(img1_path)
+```               
