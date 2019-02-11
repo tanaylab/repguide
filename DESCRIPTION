@@ -8,16 +8,32 @@ License: What license is it under?
 Encoding: UTF-8
 LazyData: true
 Imports:
-  ggplot2,
-  dplyr,
-  GenomicRanges,
+  ape,
   Biostrings,
-  data.table,
-  fastcluster,
-  glue,
-  Rbowtie,
+  broom,
   BSgenome,
-  tidyverse
+  cowplot,
+  DECIPHER,
+  data.table,
+  dplyr,
+  fastcluster,
+  forcats,
+  fs,
+  GenomicRanges,
+  ggplot2,
+  glue,
+  kmer,
+  Matrix,
+  plyr,
+  purrr,
+  Rbowtie,
+  Rtracklayer,
+  R.utils,
+  qlcMatrix,
+  scales,
+  stringr,
+  tibble,
+  tidyr
 RoxygenNote: 6.1.1
 Suggests: 
     doMC,

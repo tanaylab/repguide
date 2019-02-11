@@ -258,7 +258,7 @@ makeGRangesFromDataFramePar <- function(df, keep.extra.columns = FALSE, n_cores 
   if (sum(colnames(df) %in% 'seqnames') == 0) { df <- df %>% rename(seqnames = chrom) }
   if (is.null(n_cores)) { n_cores <- max(parallel::detectCores(), length(unique(df$seqnames))) }
   
-  doMC::registerDoMC(n_cores)
+  #doMC::registerDoMC(n_cores)
   
   gr <- 
     plyr::dlply(df, 

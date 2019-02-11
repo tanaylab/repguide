@@ -23,5 +23,8 @@ More details on the usage of the Repguide pipeline is available in the package v
 Make sure you have BiocManager and devtools installed. Then run:
 ```{r, eval=FALSE}
 options(repos = c(getOption("repos"), BiocManager::repositories()))
+install.packages('tgstat', repos=c(getOption('repos'), 'https://tanaylab.bitbucket.io/repo'))
 devtools::install_bitbucket('tanaylab/repguide', ref='default')
 ```
+
+NOTE: Repguide currently requires Unix environment.

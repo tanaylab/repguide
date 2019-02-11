@@ -159,7 +159,7 @@ plotMSA <- function(guideSet,
       select(kmer_id, kmer_clust, best) %>%
       distinct %>%
       group_by(kmer_clust) %>% 
-      summarise(kmer_id = list(c(sample(kmer_id, round(n()/20)), kmer_id[best]))) %>% 
+      summarise(kmer_id = list(c(sample(kmer_id, round(n()/10)), kmer_id[best]))) %>% 
       unnest %>% 
       pull(kmer_id)
 
@@ -168,7 +168,7 @@ plotMSA <- function(guideSet,
       select(te_id, te_clust) %>%
       distinct %>%
       group_by(te_clust) %>% 
-      summarise(te_id = list(c(sample(te_id, round(n()/20))))) %>% 
+      summarise(te_id = list(c(sample(te_id, round(n()/10))))) %>% 
       unnest %>% 
       pull(te_id)  
       
@@ -209,8 +209,8 @@ plotMSA <- function(guideSet,
   
   p_heatmap <- 
     ggdata %>% 
-    ggplot(aes(te_id, kmer_id, fill = Slocus)) + #, fill = value_bin)) + 
-      ggrastr::geom_tile_rast() +
+    ggplot(aes(te_id, kmer_id, fill = Slocus)) +
+      geom_raster() + 
       scale_fill_manual(values = c('orange', 'darkred', 'purple'), drop = FALSE) +
       #scale_fill_gradient2(low = 'blue', mid = 'lightgrey', high = 'red', midpoint = 0)
       annotate('segment', x = 0, xend = n_loci, y = row_clust_lines, yend = row_clust_lines, lwd = 0.1) +
@@ -228,8 +228,8 @@ plotMSA <- function(guideSet,
             axis.ticks.x = element_blank(),
             axis.text.y = element_blank(),
             axis.ticks.y = element_blank(),
-            panel.grid.major = element_blank(),
-            plot.margin = unit(c(0, 0, 0, 0), "cm")) +
+            panel.grid.major = element_blank()) +
+            #plot.margin = unit(c(0, 0, 0, 0), "cm")) +
       guides(fill = guide_legend(nrow = 1))
   
   return(p_heatmap)
@@ -654,17 +654,17 @@ plotCombinations <- function(guideSet)
     p_cons_cov <- ggplot() + annotate("text", x = 4, y = 25, size=8, label = 'No alignment provided') 
   }
   
-  p_heatmap <- # add clustering!
-    kmers %>% 
-    group_by(n_guides, kmer_id, te_id) %>% 
-      summarise(Son = sum(Son)) %>% 
-    ungroup %>% 
-    ggplot(aes(as.factor(kmer_id), as.factor(te_id), fill = Son)) + 
-      ggrastr::geom_tile_rast() + 
-      facet_wrap(~n_guides, nrow = 1) +
-      theme(plot.margin = unit(c(0, 0, 0, 0), "cm"),
-            axis.text.x = element_text(angle = 90, hjust = 1),
-            panel.grid.major = element_blank())
+  # p_heatmap <- # add clustering!
+    # kmers %>% 
+    # group_by(n_guides, kmer_id, te_id) %>% 
+      # summarise(Son = sum(Son)) %>% 
+    # ungroup %>% 
+    # ggplot(aes(as.factor(kmer_id), as.factor(te_id), fill = Son)) + 
+      # ggrastr::geom_tile_rast() + 
+      # facet_wrap(~n_guides, nrow = 1) +
+      # theme(plot.margin = unit(c(0, 0, 0, 0), "cm"),
+            # axis.text.x = element_text(angle = 90, hjust = 1),
+            # panel.grid.major = element_blank())
         
   
   plots <- list('a' = p_table, 
