@@ -27,7 +27,7 @@ Imports:
   plyr,
   purrr,
   Rbowtie,
-  Rtracklayer,
+  rtracklayer,
   R.utils,
   qlcMatrix,
   scales,
