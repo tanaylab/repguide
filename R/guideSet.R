@@ -35,8 +35,8 @@ setMethod(
   "initialize",
   signature = "guideSet",
   function(.Object, 
+           genome,
            alt_chromosomes,
-           genome, 
            tes,
            cis,
            refdir,
@@ -49,8 +49,8 @@ setMethod(
         message ('Searching for bowtie indeces in ', 'refdir')
       } else {
         refdir <- paste0(system.file(package = 'Repguide'), '/bowtie_indeces')
-        dir.create(index_dir, showWarnings = FALSE)
-        warning ('No bowtie index directory provided. Will search for indeces in ', index_dir, ' and create them if not found')
+        dir.create(refdir, showWarnings = FALSE)
+        warning ('No bowtie index directory provided. Will search for indeces in ', refdir, ' and create them if not found')
       }
          
       if (is.null(n_cores)) { n_cores <- parallel::detectCores() - 5 }
@@ -67,6 +67,9 @@ setMethod(
       {
         genome <- .keepBSgenomeSequences(genome, grep('_', seqnames(genome), value = TRUE, invert = TRUE))
       }
+      
+      # exclude chromosomes not represented in genome
+      seqlevels(tes, pruning.mode = 'coarse') <- seqlevels(genome)
       
       .Object@genome <- genome
       .Object@tes <- tes
@@ -129,5 +132,5 @@ createGuideSet <- function(genome,
                            refdir = '', 
                            seed = 19)
 {
-  new('guideSet', genome, tes, cis, refdir, n_cores, seed)
+  new('guideSet', genome, alt_chromosomes, tes, cis, refdir, n_cores, seed)
 }                         

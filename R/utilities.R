@@ -63,6 +63,7 @@
   genome@seqinfo <- genome@seqinfo[seqnames]
   return(genome)
 }
+
 .kmerStats <- function(kmers,
                        full = FALSE)
 {

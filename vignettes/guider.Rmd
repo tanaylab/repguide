@@ -124,7 +124,6 @@ msa_files <- dir(data_dir, full = TRUE, pattern = 'fasta.gz$')
 msa_df <- data.frame('repname' = c('LTR12B', 'LTR12D'), 'path' = msa_files)
 msa_df
 
-# replace LTR12D with LTR12B
 gs <- addAlignments(gs, # our guideSet
                     files = msa_df, # our data.frame
                     max_gap_freq = 0.8) # Removes columns with more than 80% gaps in the alignment
@@ -144,7 +143,7 @@ For that purpose, we have to first create a simple data.frame providing coordina
 ```{r}
 consensus_df <- data.frame('repname' = c('LTR12B', 'LTR12E'), 
                            'start' = c(1, 1), 
-                           end = c(150, 500))
+                           'end' = c(150, 500))
 ```
 
 We then call the `addGuides()` function to compute our guide universe. More specifically, this function first calculates the entire 19mer (in our scenario) universe of specified targets, selects kmers with proper PAM sequence, and finds and annotates their putative genomic binding sites. Since most kmers are genetically similar and hence show redundanct binding profiles, Repguide finally clusters kmers into groups with homogenous binding profiles and marks the best kmer per cluster (the number of groups and selection procedure can be specified with the `n_clust` and `method` arguments of the `addGuides()` function). Depending on the target sequence complexity, guideRNA length, and allowed mismatches, the computation may take a while.

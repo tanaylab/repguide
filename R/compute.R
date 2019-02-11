@@ -43,17 +43,17 @@
     return(s)  
   } 
   kmers$Scis = .scoreCis(kmers$cis_dist)
-  kmers[is.na(kmers$Scis),]$Scis <- 0.01
+  kmers <- kmers %>% mutate(Scis = ifelse(is.na(Scis), 0.01, Scis))
   #######################################
   
   # Compute Soff
   kmers$Soff <- kmers$Sbind * kmers$Scis
-  kmers[kmers$on_target >= 0, ]$Soff <- 0
+  kmers <- kmers %>% mutate(Soff = ifelse(on_target >= 0, 0, Soff))
   #kmers$Soff <- round(kmers$Soff, 2)
   
   # Compute Son
   kmers$Son <- kmers$Sbind
-  kmers[kmers$on_target <= 0, ]$Son <- 0
+  kmers <- kmers %>% mutate(Son = ifelse(on_target <= 0, 0, Son))
   #kmers$Son <- round(kmers$Son, 2)
   
   # Add results to guideSet

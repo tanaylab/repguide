@@ -142,12 +142,13 @@ addGuides <- function(guideSet,
                       lower_count = 5,
                       force = FALSE)
 {
-  if(!n_mismatches %in% c(0, 1, 2, 3)) { stop('Mismatches must be 0, 1, 2, or 3') }
-  if(guide_length < 15 | guide_length > 25 ) { stop('Guide length must be between 15 and 25') }
-  if(length(guideSet@targets) == 0) { stop('Add targets to guideSet using addTargets function before calling addGuides') }
+  if (!n_mismatches %in% c(0, 1, 2, 3)) { stop('Mismatches must be 0, 1, 2, or 3') }
+  if (guide_length < 15 | guide_length > 25 ) { stop('Guide length must be between 15 and 25') }
+  if (length(guideSet@targets) == 0) { stop('Add targets to guideSet using addTargets function before calling addGuides') }
+  if (!is.null(consensus_range) & length(guideSet@alignments) == 0) { stop ('No consensus model found. Call addAlignments on guideSet or omit consensus range') }
   
   # Check if slot already exists
-  if(length(guideSet@kmers) != 0 & !force)
+  if (length(guideSet@kmers) != 0 & !force)
   {
     stop('guideSet already contains guides. Use force = TRUE to overwrite (will remove all downstream results)')
   }
