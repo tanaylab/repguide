@@ -1,18 +1,19 @@
 # Consider using 'I4!=======44444+++++++' weighted phred from https://github.com/mhorlbeck/CRISPRiaDesign/blob/master/Library_design_walkthrough.md
-# Think of --tryhard parameter
+# add guide mother seq performance could be improved using data.table
 .bowtie <- function(guideSet,
-                    n_mismatches = 0)
+                    n_mismatches = 0,
+                    lower_count = 2)
 {
   genome <- guideSet@genome
+  index_dir <- guideSet@refdir
   n_cores <- guideSet@.n_cores
   kmers_file <- tempfile()
   align_file <- tempfile()
   
-  kmers <- .jellyfish(guideSet)
+  kmers <- .jellyfish(guideSet, lower_count)
   fwrite(list(kmers), kmers_file)
   
   index_id <- genome@pkgname
-  index_dir <- system.file(package = 'guideR', 'data-raw', 'bowtie_indeces')
   index_path <- paste0(index_dir, '/', index_id)
   
   if (!file.exists(paste0(index_path, '.1.ebwt'))) { .bowtieIndex(guideSet) }
@@ -42,10 +43,9 @@
 .bowtieIndex <- function(guideSet)
 {
   genome <- guideSet@genome
-  
   index_id <- genome@pkgname
-  index_dir <- system.file(package = 'guideR', 'data-raw', 'bowtie_indeces')
-  
+  index_dir <- guideSet@refdir
+    
   print ('Creating bowtie index, this may take a while')
   genome_fasta_fn <- tempfile()
     
@@ -56,6 +56,13 @@
   tmp <- Rbowtie::bowtie_build(references = genome_fasta_fn, outdir = index_dir, prefix = index_id, force = TRUE, noref = TRUE, offrate = 3) 
 }
 
+.keepBSgenomeSequences <- function(genome, seqnames)
+{
+  stopifnot(all(seqnames %in% seqnames(genome)))
+  genome@user_seqnames <- setNames(seqnames, seqnames)
+  genome@seqinfo <- genome@seqinfo[seqnames]
+  return(genome)
+}
 .kmerStats <- function(kmers,
                        full = FALSE)
 {
@@ -151,6 +158,8 @@ binGenome <- function(genome, bin_width = 250)
 #'
 #' @param guideSet guideSet object to query.
 #' @param class Character. Only show families belonging to \code{class}.
+#' @param low_complexity Logical. Should low complexity families be returned.
+#' @return Character vector.
 #' @export
 listFamilies <- function(guideSet, 
                          repclass = NULL, 
@@ -180,7 +189,7 @@ clustGuides <- function(guideSet,
   kmers <- as_tibble(guideSet@kmers) %>% select(-matches('kmer_clust|te_clust'))
   kmers_filt <- 
     kmers %>%
-    filter(Son >= min_Son & on_target == 1) %>%
+    filter(Son > min_Son & on_target == 1) %>%
     filter(valid)
     
   mat_full <- 
@@ -214,7 +223,7 @@ clustGuides <- function(guideSet,
   return(guideSet)
 }
 
-.jellyfish <- function(guideSet)
+.jellyfish <- function(guideSet, lower_count = 2)
 {
   PAM <- guideSet@PAM
   kmer_length <- guideSet@guide_length + nchar(PAM)
@@ -227,9 +236,9 @@ clustGuides <- function(guideSet,
   # Write target seqs to file for jellyfish
   Biostrings::writeXStringSet(guideSet@targets$seq, filepath = seq_file, format = 'fasta')
   
-  jellyfish_path <- system.file(package = 'guideR', 'inst', 'bin', 'jellyfish-linux')
+  jellyfish_path <- system.file(package = 'Repguide', 'inst', 'bin', 'jellyfish-linux')
   
-  cmd <- glue::glue("{jellyfish_path} count --mer-len {kmer_length} --size 100M --threads {n_cores} --out-counter-len 0 --lower-count 2 --text {seq_file} --output {kmers_file} ")
+  cmd <- glue::glue("{jellyfish_path} count --mer-len {kmer_length} --size 100M --threads {n_cores} --out-counter-len 0 --lower-count {lower_count} --text {seq_file} --output {kmers_file} ")
   system(command = cmd)
   
   kmers_all <- fread(kmers_file, skip = 1)

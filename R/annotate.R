@@ -6,7 +6,6 @@ annoGuides <- function(guideSet)
   anno_te <- guideSet@tes
   targets <- guideSet@targets
   cis <- guideSet@cis
-  PAM <- guideSet@PAM
   
   if (!is.null(guideSet@kmers$te_id)) # unique in case of repeated calling of annoGuides (kmers_exp may duplicate rows)
   {
@@ -14,47 +13,45 @@ annoGuides <- function(guideSet)
     kmers <-
       kmers %>% 
       as_tibble %>%
-      select(-cis_dist, -gc, -Sbind, -Scis, -Soff, -Son, -te_id, -unique_id, -genomic_bin) %>%
+      select(-cis_dist, -gc, -Sbind, -Scis, -Soff, -Son, -te_id, -unique_id, -genomic_bin, -repname, -con_pos, -on_target) %>%
       distinct %>%
       makeGRangesFromDataFrame(., keep.extra.columns = TRUE)
   } else { print('Annotating guides') }
   
+  # remove duplicated binding sites
+  kmers_unique <- unique(kmers)
+  mcols(kmers_unique) <- NULL
+  kmers_unique$queryHits <- 1:length(kmers_unique)
   
   # Add genomic bin ID
-  kmers$genomic_bin <- GenomicRanges::findOverlaps(kmers, genomic_bins, minoverlap = floor(guide_length/2), select = 'first')
-    
-  kmers$te_id <- as.numeric(NA)
-  kmers$repname <- as.character(NA)
-  kmers$on_target <- as.character(NA)
-	
-  # Find Overlaps between kmers and te coords
-  hits_te <- GenomicRanges::findOverlaps(kmers, anno_te) %>% # Sometimes more than 1 TE hit per binding site gs@
-    as_tibble %>%
-    right_join(., tibble(queryHits = 1:length(kmers)))
-	kmers_exp <- kmers[hits_te$queryHits]
-  hits_te_exp <- hits_te %>% mutate(queryHits = 1:nrow(hits_te))
-  # Add universal TE ID, family name, and the #bases into the te locus (required to map onto MSA)
-  
-  kmer_indeces <- hits_te_exp %>% filter(!is.na(subjectHits)) %>% pull(queryHits)
-  te_indeces <- na.omit(hits_te_exp$subjectHits)
-  
-  kmers_exp[kmer_indeces]$te_id <- anno_te[te_indeces]$te_id
-  kmers_exp[kmer_indeces]$repname <- anno_te[te_indeces]$repname
-  kmers_exp$unique_id <- ifelse(is.na(kmers_exp$te_id), kmers_exp$genomic_bin, kmers_exp$te_id)
-  
-  kmers_exp$on_target <- as.numeric(1:length(kmers_exp) %in% GenomicRanges::findOverlaps(kmers_exp, guideSet@targets)@from & kmers_exp$repname %in% guideSet@families)
-  kmers_exp$on_target[kmers_exp$on_target <= 0] <- -1
+  kmers_unique$genomic_bin <- findOverlaps(kmers_unique, genomic_bins, minoverlap = floor(guide_length/2), select = 'first')
   
   # Add distance to nearest cis
-  kmers_exp$cis_dist <- NA
-  hits <- distanceToNearest(kmers_exp, cis)
-  kmers_exp$cis_dist[hits@from] <- mcols(hits)$distance
+  kmers_unique$cis_dist <- NA
+  hits <- distanceToNearest(kmers_unique, cis)
+  kmers_unique[hits@from]$cis_dist <- mcols(hits)$distance
+  
+  # Add TE id, repname, and on_target
+  hits_te         <- as_tibble(findOverlaps(kmers_unique, anno_te))
+  hits_te$repname <- anno_te[hits_te$subjectHits]$repname
+  hits_te$te_id   <- anno_te[hits_te$subjectHits]$te_id
+  hits_te         <- select(hits_te, -subjectHits)
+  kmers_unique    <- full_join(as_tibble(kmers_unique), hits_te, by = 'queryHits') %>% 
+                     select(-queryHits) %>%
+                     mutate(unique_id = ifelse(is.na(te_id), genomic_bin, te_id),
+                            on_target = as.numeric(repname %in% guideSet@families),
+                            on_target = ifelse(on_target <= 0, -1, on_target))
+  
+  # Add anno to full kmer data.frame
+  kmers <- full_join(as_tibble(kmers), 
+                      kmers_unique, by = c('seqnames', 'start', 'end', 'strand', 'width'))
   
   # Add GC conent
-  kmer_gc <- as.numeric(letterFrequency(DNAStringSet(substring(kmers_exp$guide_seq, 1, guide_length)), "GC"))
-  kmers_exp$gc <- round(kmer_gc / guide_length, 2) 
+  kmer_gc <- as.numeric(letterFrequency(DNAStringSet(substring(kmers$guide_seq, 1, guide_length)), "GC"))
+  kmers$gc <- round(kmer_gc / guide_length, 2) 
   
-  guideSet@kmers <- kmers_exp
+  # Export results
+  guideSet@kmers <- makeGRangesFromDataFrame(kmers, keep.extra.columns = TRUE)
   
   # Add position on consensus for kmers
   if (length(guideSet@alignments) != 0)

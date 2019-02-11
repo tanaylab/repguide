@@ -1,7 +1,11 @@
-#' @include guideR.R
+#' @include guideSet.R
 NULL
 
-setMethod("export", signature('guideSet'), function(guideSet, outdir = NULL, force = FALSE, workspace = FALSE, dpi = 300) 
+setMethod("export", signature('guideSet'), function(guideSet, 
+                                                    outdir = NULL, 
+                                                    force = FALSE, 
+                                                    workspace = FALSE, 
+                                                    dpi = 300) 
 { 
   if(is.null(outdir) & !force) 
   { 
@@ -16,26 +20,37 @@ setMethod("export", signature('guideSet'), function(guideSet, outdir = NULL, for
   suffix <- paste0('guideR_report', '_', datum, '_', zeit, '/')
   outdir <- ifelse(is.null(outdir), suffix, paste0(outdir, '/', suffix))
   dir.create(outdir, showWarnings = TRUE, recursive = FALSE, mode = "0777")
+  dir.create(paste0(outdir, '/full_stats/'))
   setwd(outdir)
   message(paste0('Exporting guideSet to ', outdir))
+  
+  ##############
+  # full report
+  ##############
   
   # export targets
   if(length(guideSet@targets) > 0)
   {
-    data.table::fwrite(as_tibble(guideSet@targets), file = 'targets.txt', sep = '\t')
+    data.table::fwrite(as_tibble(guideSet@targets), file = paste0('full_stats/', 'targets.txt'), sep = '\t')
   }
 
   # export kmers
-  if(length(guideSet@kmers) > 0)
+  if(length(kmers) > 0)
   {
-    data.table::fwrite(as_tibble(guideSet@kmers), file = 'kmers.txt', sep = '\t')
+    data.table::fwrite(as_tibble(guideSet@kmers), file = paste0('full_stats/', 'kmers.txt'), sep = '\t')
   }
- 
+   
   # export combinations
   if(length(guideSet@combinations) > 0)
   {
-    data.table::fwrite(tidyr::unnest(guideSet@combinations), file = 'combinations.txt', sep = '\t')
+    data.table::fwrite(tidyr::unnest(guideSet@combinations), file = paste0('full_stats/', 'combinations.txt'), sep = '\t')
   }
+  
+  ##############
+  # slim report
+  ##############
+  .exportGuides(guideSet)
+  
   # export plots
   .exportPlots(guideSet, dpi = dpi)
   
@@ -79,4 +94,29 @@ setMethod("export", signature('guideSet'), function(guideSet, outdir = NULL, for
     ggsave(fn, p, device = 'png', dpi = dpi)
     i <- i + 1
  }
+}
+
+.exportGuides <- function(guideSet)
+{
+  combinations_subs <- guideSet@combinations %>% filter(best) %>% unnest
+  kmers <- as_tibble(guideSet@kmers)
+  kmers_subs <- right_join(kmers, combinations_subs) 
+  n_guides <- paste0(unique(kmers_subs$n_guides), '_guides')
+  
+  
+  kmers_by_nguides <- 
+    kmers_subs %>%
+    group_by(n_guides) %>% 
+    do(data.frame = as.tibble(.))
+    
+  kmer_seqs_by_nguides <-
+    kmers_subs %>%
+    group_by(n_guides) %>%
+    do(guide_seq = unique(DNAStringSet(structure(.$guide_seq, names = as.character(.$kmer_id)), use.names = TRUE)))
+  
+  for (i in 1:length(n_guides))
+  {
+    fwrite(kmers_by_nguides$data.frame[[i]], file = paste0(n_guides[i], '_binding.txt'), sep ='\t')
+    Biostrings::writeXStringSet(kmer_seqs_by_nguides$guide_seq[[i]], filepath = paste0(n_guides[i], '_sequence.fasta'), format = 'fasta')  
+  }
 }

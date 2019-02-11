@@ -1,4 +1,4 @@
-Package: guideR
+Package: Repguide
 Title: Design CRISPR guide RNAs against repetitive sequences
 Version: 0.0.0.9000
 Authors@R: person("David", "Brocks", email = "davidbrocks87@gmail.com", role = c("aut", "cre"))
@@ -20,6 +20,7 @@ Imports:
   tidyverse
 RoxygenNote: 6.1.1
 Suggests: 
+    doMC,
     knitr,
     rmarkdown
 VignetteBuilder: knitr
@@ -27,10 +28,10 @@ Collate:
     'add.R'
     'annotate.R'
     'compute.R'
-    'guideR.R'
+    'guideSet.R'
     'export.R'
     'import.R'
-    'package-guideR.R'
+    'package-Repguide.R'
     'plot.R'
     'select.R'
     'utilities.R'

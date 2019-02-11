@@ -145,19 +145,52 @@ plotMSA <- function(guideSet,
     as_tibble(guideSet@kmers) %>%
     filter(!is.na(kmer_clust) & !is.na(te_clust)) %>%
     filter(valid)
+  
+  #########################
+  # Sample Kmers and Loci #
+  #########################
+  if (nrow(kmers) > 5e6)
+  {
+    set.seed(guideSet@.seed)
+    kmers_slim <- kmers %>% select(kmer_id, te_id, kmer_clust, te_clust, best)
     
-  # set.seed(guideSet@.seed)
-  # kmers_ds <-
-    # sample_n(kmers, 100000)
+    kmers_subset <- 
+      kmers_slim %>% 
+      select(kmer_id, kmer_clust, best) %>%
+      distinct %>%
+      group_by(kmer_clust) %>% 
+      summarise(kmer_id = list(c(sample(kmer_id, round(n()/20)), kmer_id[best]))) %>% 
+      unnest %>% 
+      pull(kmer_id)
+
+    loci_subset <- 
+      kmers_slim %>% 
+      select(te_id, te_clust) %>%
+      distinct %>%
+      group_by(te_clust) %>% 
+      summarise(te_id = list(c(sample(te_id, round(n()/20))))) %>% 
+      unnest %>% 
+      pull(te_id)  
+      
+    kmers <- kmers %>% filter(te_id %in% loci_subset & kmer_id %in% kmers_subset)
+  }
   
-  kmer_hit_score <- 
-    kmers %>% 
-    group_by(kmer_id, te_id) %>% 
-      summarise(Son = max(Son)) %>% 
-    ungroup %>% 
-    left_join(., kmers %>% select(kmer_id, te_id, kmer_clust, te_clust))
+  kmers_dt <- as.data.table(kmers, sorted = FALSE)
+  setkey(kmers_dt, 'kmer_id', 'te_id')
+  kmer_hit_score <- kmers_dt[, .(Son = max(Son),
+                                 kmer_clust = kmer_clust[1],
+                                 te_clust = te_clust[1]),
+                                 by = c('kmer_id', 'te_id')]
   
-  ggdata <- 
+  # ggdata <-
+    # kmer_hit_score[order(kmer_clust)
+                 # ][, kmer_id := forcats::fct_inorder(as.character(kmer_id))
+                 # ][order(te_clust)
+                 # ][, te_id := forcats::fct_inorder(as.character(te_id))
+                 # ][, Slocus := cut(Son, breaks = c(0, 0.25, 0.5, 1), include.lowest = TRUE)]
+  
+  
+  ggdata <- # mildly slow
     kmer_hit_score %>%
     arrange(kmer_clust) %>% 
     mutate(kmer_id = forcats::fct_inorder(as.character(kmer_id))) %>% 
@@ -182,8 +215,8 @@ plotMSA <- function(guideSet,
       #scale_fill_gradient2(low = 'blue', mid = 'lightgrey', high = 'red', midpoint = 0)
       annotate('segment', x = 0, xend = n_loci, y = row_clust_lines, yend = row_clust_lines, lwd = 0.1) +
       geom_vline(xintercept = col_clust_lines, lwd = 0.1) +
-      xlab(paste0('target loci (n = ', n_loci, ')')) +
-      ylab(paste0('guides (n = ', n_kmers, ')')) +
+      xlab(paste0('Sampled target loci (n = ', n_loci, ')')) +
+      ylab(paste0('Sampled guides (n = ', n_kmers, ')')) +
       coord_cartesian(xlim = c(0, n_loci + round(n_loci / 100)), clip="off") +
       annotate('segment', x = n_loci + round(n_loci / 100), xend = n_loci + 10, y = best_kmer_pos, yend = best_kmer_pos, 
                lwd = 0.1, arrow = arrow(type = "open", length = unit(n_kmers/100000, "npc"))) +
@@ -341,10 +374,10 @@ plotTargets <- function(guideSet)
 #' @export
 plotGuides <- function(guideSet)
 {
-  # TO DO call kmerStats once!
   kmers <- as_tibble(guideSet@kmers) 
+  kmer_stats <- .kmerStats(kmers)
   
-  gs@kmers %>% as_tibble %>% filter(on_target < 0) %>% ggplot(aes(Scis, Sbind, col = Soff)) + geom_point(alpha = 0.1) + scale_colour_gradientn(colours = colorRampPalette(c('darkblue', 'orange', 'darkred'))(256))
+  # gs@kmers %>% as_tibble %>% filter(on_target < 0) %>% ggplot(aes(Scis, Sbind, col = Soff)) + geom_point(alpha = 0.1) + scale_colour_gradientn(colours = colorRampPalette(c('darkblue', 'orange', 'darkred'))(256))
   
   p_guide_filt_counts <-
     kmers %>% 
@@ -385,11 +418,10 @@ plotGuides <- function(guideSet)
       # facet_wrap(~type, nrow = 1, scales = 'free_x') + 
       # theme(legend.position = 'none')
   
-  p_valid_score_gc <-
-    kmers %>%
-    .kmerStats(full = TRUE) %>%
-    select(kmer_id, Son_tot, Soff_tot, valid) %>%
-    distinct %>%
+  p_valid_score_gc <- # slow, improve!
+    kmer_stats %>% 
+    mutate(valid = kmer_id %in% 
+                  (kmers %>% filter(valid) %>% pull(kmer_id))) %>%
     ggplot() +
       geom_point(aes(Soff_tot, Son_tot, col = valid), alpha = 0.05) +
       #geom_density_2d(aes(Soff_tot, Son_tot)) +
@@ -400,10 +432,11 @@ plotGuides <- function(guideSet)
       #facet_grid(~valid_gc) +
       theme(legend.position = 'none')
       
-  p_sbind_boxplot <-
+  p_sbind_boxplot <- # samples to plot distribution
     kmers %>% 
       filter(valid) %>%
       filter(n_mismatches != 0) %>%
+      sample_n(min(nrow(.), 10000), replace = FALSE) %>%
       ggplot(aes(x = as.factor(n_mismatches), y = Sbind, fill = as.factor(n_mismatches), group = n_mismatches)) + 
         #geom_violin() +
         geom_boxplot(width=.1, outlier.colour=NA) +
@@ -413,7 +446,7 @@ plotGuides <- function(guideSet)
   scaling_fact <- kmers %>% filter(on_target < 0 & cis_dist <= 100) %>% count %>% pull
   p_cis_decay <-
     kmers %>% 
-      filter(on_target < 0) %>% 
+      filter(on_target < 0) %>% #only off-targets
       filter(cis_dist <= 5000) %>%
       ggplot() + 
         geom_histogram(aes(x = cis_dist, stat(count / scaling_fact)), binwidth = 150) +
@@ -423,11 +456,9 @@ plotGuides <- function(guideSet)
   
   p_guide_hit_heatmap <- .plotClusts(guideSet)
   
-  p_best_per_clust <-   
-    kmers %>%
-    .kmerStats(., full = TRUE) %>%
-    select(kmer_id, kmer_clust, best, Soff_tot, Son_tot) %>%
-    distinct %>%
+  p_best_per_clust <- #slow 
+    left_join(kmer_stats, 
+              kmers %>% select(kmer_id, kmer_clust, best) %>% distinct) %>%
     ggplot(aes(Soff_tot, Son_tot, col = as.factor(kmer_clust))) +
       geom_point(aes(size = best, alpha = best)) +
       facet_wrap(~kmer_clust, ncol = 2) +
@@ -487,6 +518,7 @@ plotGuides <- function(guideSet)
 #' @export
 plotCombinations <- function(guideSet)
 { 
+  if (length(guideSet@combinations)) { stop ('Call addCombinations on guideSet before calling plotCombinations') }
   combinations <- guideSet@combinations 
   kmers <- 
     guideSet@kmers %>%

@@ -1,45 +1,39 @@
-.compGuideScores <- function(guideSet) # Sbind can be interprated as the likelyhood of binding to a site (0 - 100)
+.compGuideScores <- function(guideSet) # Sbind can be interprated as the likelyhood of binding to a site (0 - 1)
 {
   print('Computing guide scores')
-  kmers <- guideSet@kmers
-  kmers$Sbind <- 1
+  kmers <- as_tibble(guideSet@kmers) %>% select(-matches('Sbind'))
   PAM <- guideSet@PAM
   guide_length <- guideSet@guide_length + nchar(PAM)
-    
-  mismatches <- stringr::str_extract_all(kmers$mismatches, '[0-9]+', simplify = TRUE)
-  rownames(mismatches) <- 1:nrow(mismatches)
-
-  mismatches_long <- 
-    mismatches %>% 
-    as.data.frame %>% 
-    rownames_to_column %>% 
-    gather(V1, V2, -rowname) %>% 
-    as_tibble %>% 
-    select(-V1) %>% 
-    filter(V2 != '') %>%
-    mutate(V2 = as.numeric(V2)) %>%
-    data.table::setDT(key = 'rowname')
-    
-  # Calculate Score
-  # Formula adapted from Breaking-Cas: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4987939/
-  .scoring <- function(weight, d, m, guide_length)
-  {
-    s <- weight * (1 / (((guide_length - d) / guide_length) * 1 + 1)) * (1 / (m * m))
-    return(s)
-  }
+  max_mismatches <- max(kmers$n_mismatches)
   
-  mismatches_stats <- 
-    mismatches_long[ , ({m = .N;                                # total mismatches
-                         d = (max(V2) - min(V2)) / (m - 1);     # approximate of average pairwise distance between mismatches
-                         weight = prod((1 - V2 / guide_length));            # custom weighting function based on position in guide
-                         list(m = m, d = d, weight = weight, pos = V2)}),
-                         by = rowname]
-  mismatches_stats[is.na(d), d := 0]
-  mismatches_stats <- subset(unique(mismatches_stats, by = c('rowname')), select = -pos)
-  mismatches_stats[, Sbind := .scoring(weight, d, m, guide_length)]
-  ######################################################################################
+  ###################
+  # Calculate Sbind #
+  ###################
+  if (max_mismatches > 0)
+  {
+    mismatch_universe <- .compMismatchUniverse(guide_length, max_mismatches) # guidelength must be 1 based
+    mismatch_universe_scored <- .compMismatchScore(mismatch_universe, guide_length) # guidelength must be 1 based
 
-  kmers[as.numeric(mismatches_stats$rowname), ]$Sbind <- mismatches_stats$Sbind                      
+    # get kmer mismatches
+    mismatches <- stringr::str_extract_all(kmers$mismatches, '[0-9]+', simplify = TRUE) # could be parallelized!, quite fast already
+    colnames(mismatches) <- c('first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eights')[1:ncol(mismatches)]
+    
+    # add mismatches to kmer data.frame
+    kmers <- bind_cols(kmers, 
+                      (as_tibble(mismatches) %>% mutate_all(as.numeric)))
+    
+    # add mismatch score (Sbind), could be improved with data.table
+    kmers <- 
+      left_join(kmers, 
+                mismatch_universe_scored) %>%
+      mutate(Sbind = ifelse(n_mismatches == 0, 1, Sbind))
+  } else {
+    kmers$Sbind <- 1
+  }  
+  
+  ###################
+  # Calculate Scis #
+  ################### 
 
   # Compute cis score (Boltzmann sigmoid)
   .scoreCis <- function(x, slope = 5, midpoint = 2000)
@@ -49,50 +43,91 @@
     return(s)  
   } 
   kmers$Scis = .scoreCis(kmers$cis_dist)
-  kmers[is.na(kmers$Scis)]$Scis <- 1
+  kmers[is.na(kmers$Scis),]$Scis <- 0.01
   #######################################
   
   # Compute Soff
   kmers$Soff <- kmers$Sbind * kmers$Scis
-  kmers[kmers$on_target >= 0]$Soff <- 0
+  kmers[kmers$on_target >= 0, ]$Soff <- 0
   #kmers$Soff <- round(kmers$Soff, 2)
   
   # Compute Son
   kmers$Son <- kmers$Sbind
-  kmers[kmers$on_target <= 0]$Son <- 0
+  kmers[kmers$on_target <= 0, ]$Son <- 0
   #kmers$Son <- round(kmers$Son, 2)
   
-  guideSet@kmers <- kmers
+  # Add results to guideSet
+  guideSet@kmers$Sbind <- kmers$Sbind
+  guideSet@kmers$Scis  <- kmers$Scis
+  guideSet@kmers$Soff  <- kmers$Soff
+  guideSet@kmers$Son   <- kmers$Son
+
   return(guideSet)
 }
 
-# Calculates given Kmer input the coverage along given MSA and outputs its coverage in long format
-.compCov <- function(msa,
-                     kmers,
-                     GUIDE_LENGTH = 19)
+.compMismatchUniverse <- function(guide_length, max_mismatches)
 {
-  if(class(msa)[1] == 'DNAStringSet')
+  column_labels <- c('first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eights')
+  
+  liste <- list()
+  for (n_mism in 1:max_mismatches)
   {
-    print('Converting MSA to long format')
-    msa <- msaToLong(msa)
-    print('done')
+    liste[[n_mism]] <-
+      combn(0:(guide_length -1), n_mism) %>% 
+      t %>%
+      as.data.frame
   }
   
-  n_loci = unique(length(msa$te_id))
-  
-  loci_kmers_cov <- 
-    kmersToCov(kmers, guide_length = GUIDE_LENGTH) %>%
-    dplyr::rename(pos_wo_gaps = pos)
-
-  msa_kmers_cov <-
-    left_join(msa, loci_kmers_cov, by = c('te_id', 'pos_wo_gaps')) %>%
-    replace_na(list(n = 0)) # add 0 coverage to non-covered pos
-    
-  return(msa_kmers_cov)
+  mismatch_universe <- as_tibble(do.call(bind_rows, liste))
+  colnames(mismatch_universe) <- column_labels[1:max_mismatches]
+  return(mismatch_universe)
 }
 
+.compMismatchScore <- function(mismatch_universe, guide_length)
+{
+  guide_length <- guide_length - 1
+  
+  # Formula adapted from Breaking-Cas: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4987939/
+  .scoring <- function(weight, d, m, guide_length)
+  {
+    s <- weight * (1 / (((guide_length - d) / guide_length) * 1 + 1)) * (1 / (m * m))
+    return(s)
+  }
+  
+  # clean data.frame in case of repeated usage
+  mismatch_universe <- mismatch_universe %>% select(-which(colnames(mismatch_universe) %in% c('m', 'max', 'min', 'd', 'weight', 'Sbind')))
+  
+  # total mismatches
+  mismatch_universe$m <- rowSums(!is.na(mismatch_universe %>% select(-which(colnames(mismatch_universe) %in% c('m')))))
+  
+  # approximate of average pairwise distance between mismatches
+  mismatch_universe <- 
+    mismatch_universe %>% 
+    mutate(max = apply(mismatch_universe[, !colnames(mismatch_universe) %in% 'm'], 1, max, na.rm = TRUE),
+           min = apply(mismatch_universe[, !colnames(mismatch_universe) %in% 'm'], 1, min, na.rm = TRUE),
+           d = ifelse(m > 1, (max - min) / (m - 1), 0))               
+  
+  # custom weighting function based on position in guide
+  mismatch_universe <-
+    mismatch_universe %>%
+    mutate(weight = apply(mismatch_universe[, !colnames(mismatch_universe) %in% c('m', 'max', 'min', 'd', 'weight')], 1, function(x)
+                    {
+                      x <- 1 - x / guide_length
+                      weight <- prod(x, na.rm = TRUE)
+                    })
+          )
+  
+  mismatch_universe <- 
+    mismatch_universe %>% 
+    mutate(Sbind = .scoring(weight, d, m, guide_length)) %>%
+    select(-m, -max, -min, -d, -weight)
+
+  return(mismatch_universe)
+}
+
+
 .compCombinations <- function(guideSet,
-                              n_guides_max = 10,
+                              n_guides_max = 5,
                               method = 'cluster')
 {
   if (method == 'cluster')
@@ -128,12 +163,12 @@
     # Calculate on/off targets per combo
     combination_hits <- kmers_slim[combinatorics_df, on = 'kmer_id', allow.cartesian = TRUE, nomatch = 0]
     combination_stats <- combination_hits[, .(Son = max(Son), 
-                                              Soff = max(Soff),
-                                              on_tot = sum(Son > 0),
-                                              off_tot = sum(Soff > 0)),
+                                              Soff = max(Soff)),
                                               by = c('combi_id', 'unique_id')
                                          ][, .(Son_tot = sum(Son), 
-                                               Soff_tot = sum(Soff)), 
+                                               Soff_tot = sum(Soff),
+                                               on_tot = length(unique_id[Son > 0]),
+                                               off_tot = length(unique_id[Soff > 0])),
                                                by = 'combi_id'] %>%
       as_tibble %>%
       left_join(combinatorics_df) %>%
@@ -191,11 +226,14 @@ compStats <- function(kmers)
   print(stats)
 }
 
+# Check multi processor performance
+# Think of providing substituiton matrix 
 .compMSA <- function(seqs,
                      max_gap_freq = 0.8,
+                     iterations,
+                     refinements,
                      kmer_length = 7,
                      n_clust = 10,
-                     n_cores = 1,
                      clust_perc = 1,
                      seed = NULL) # ultrafast but rough MSA
 {
@@ -235,41 +273,18 @@ compStats <- function(kmers)
     unnest %>% 
     pull(te_id)
 
-  print(paste0('Aligning ', length(ids_sel), ' sequences'))
+  message(paste0('Aligning ', length(ids_sel), ' sequences'))
   
   alignment <- DECIPHER::AlignSeqs(seqs[ids_sel], 
-                                   processors = n_cores, 
-                                   iterations = 1, 
-                                   refinements = 0, 
+                                   #processors = n_cores, 
+                                   iterations = iterations, 
+                                   refinements = refinements, 
                                    useStructures = FALSE,
                                    verbose = FALSE)
   alignment_wo_gaps <- .rmGaps(alignment, max_gap_freq = max_gap_freq)
   
   return(alignment_wo_gaps)
 }
-
-# .compConsensus <- function(msa)
-# {
-  # if (class(msa) == 'DNAStringSet')
-  # {
-    # msa <- msaToLong(msa)
-  # }
-  
-  # con_seq <-
-    # msa %>% 
-    # filter(base != '-') %>% 
-    # count(pos, base) %>% 
-    # group_by(pos) %>% 
-      # top_n(1) %>% 
-      # sample_n(1) %>% 
-    # ungroup %>% 
-    # pull(base) %>% 
-    # glue::glue_collapse(.) %>% 
-    # DNAStringSet
-    
-  # return(con_seq)
-# }
-
 
 
 

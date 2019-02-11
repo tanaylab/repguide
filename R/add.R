@@ -1,16 +1,20 @@
 #' Add multiple sequence alignment to guideSet object
 #'
-#' Either calculates multiple sequence alignment and consensus sequence or imports from external file
+#' Calculates rough multiple sequence alignment and consensus sequence or imports from external file
 #'
-#' @param guideSet guideSet with targets
-#' @param file String
-#'
-#'
-#'
+#' @param guideSet guideSet containing targets
+#' @param files data.frame. Requires columns 'repname' and 'path' storing family identifiers and paths to the multiple sequence alignment, respectively.
+#' @param max_gap_freq Numeric. Removes positions on alignment with higher gap (-) frequency than \code{max_gap_freq}.
+#' @param iterations Numeric. Passed to AlignSeqs from DECIPHER package.
+#' @param refinements Numeric. Passed to AlignSeqs from DECIPHER package.
+#' @param force Logical. If TRUE, overwrites existing alignments.
+#' @return Returns a guideSet object with alignments.
 #' @export
 addAlignments <- function(guideSet,
                           files = NULL, # Either single character vector or df
                           max_gap_freq = 0.8,
+                          iterations = 2,
+                          refinements = 1,
                           force = FALSE
                           )
 {
@@ -38,7 +42,7 @@ addAlignments <- function(guideSet,
   alignments_comp <- 
     DNAStringSetList(unlist(tapply(1:length(targets_comp), targets_comp$repname, function(x)
     {
-      .compMSA(targets_comp[x], n_cores = n_cores, max_gap_freq)  
+      .compMSA(targets_comp[x], max_gap_freq, iterations, refinements)  
     })))
   
   # Import alignments
@@ -79,19 +83,15 @@ addAlignments <- function(guideSet,
 #'
 #' Selects set of non-redundant guideRNAs and computes all potential combinations against targets of interest.
 #' 
-#' @param guideSet guideSet object with kmers.
-#' @param n_clust Single positive integer <= 20. Number of groups to cluster guideRNAs into. 
-#'   Higher \code{n_clust} usually gives better results but comes with a speed penalty.
+#' @param guideSet guideSet object containing guides.
+#' @param max_guides Numeric. Maximum number of distinct guides to consider when calculating combinations.
 #' @param method String. Method of how to pick the best guideRNA per cluster. 
 #' @param coeff Integer. If \code{method} is \code{regression}, \code{coeff} modifies the slope of the linear regression.
-#'
-#' @return Returns a guideSet object 
-#' @examples
-#' gs <- createGuideSet(Hsapiens)
-#' gs <- addTargets(targets = c('LTR12C', 'LTR12E'), alignment = TRUE)
+#' @param force Logical. If \code{TRUE}, overwrites existing results
+#' @return Returns a guideSet object with combinations. 
 #' @export 
 addCombinations <- function(guideSet, 
-                            n_guides = 5,
+                            max_guides = 5,
                             method = c('max', 'min', 'ratio', 'regression'),
                             coeff = 1,
                             force = FALSE)
@@ -102,7 +102,7 @@ addCombinations <- function(guideSet,
   # Remove downstream results
   slot(guideSet, name = 'plots') <- list('targets' = guideSet@plots$targets, 'guides' = guideSet@plots$guides, 'combinations' = list())
   
-  guideSet <- .compCombinations(guideSet, n_guides_max = n_guides)
+  guideSet <- .compCombinations(guideSet, n_guides_max = max_guides)
   guideSet <- .selBestKmers(guideSet, method = method, coeff = coeff)
   
   guideSet@calls$combinations <- match.call()
@@ -115,30 +115,31 @@ addCombinations <- function(guideSet,
 #' 
 #' @param guideSet guideSet object with targets. 
 #' @param n_mismatches Single integer of either 0, 1, 2, or 3. Maximal number of tolerated mismatches when assessing guideRNA binding targets. Defaults to 0.
-#' @param guide_length Single integer between 10 and 30. Basepair size of the guideRNAs. 
-#'   A spacer length of 19 (the default) has been optimal in 'Sequence determinants of improved CRISPR sgRNA design', 
-#'     but shorter guides may result in fewer actual off-targets 'Improving CRISPR-Cas nuclease specificity using truncated guide RNAs'
-#' @param min_targets Single integer >= 0. Discard guideRNAs with less than \code{min_targets} hits on target.
-#' @param max_off_targets Single integer >= 0. Discard guideRNAs with more than \code{max_off_targets} off target hits.
-#' @param consensus_range DataFrame with repname, start, and end columns. Discard guideRNAs targeting parts outside of \code{consensus_range} on the consensus.
-#' @param PAM Character. Currently only 'NGG' PAMs are supported.
-#' 
-#' @return Returns a guideSet object 
+#' @param guide_length Single integer between 15 and 25. Basepair size of the guideRNAs. Defaults to 19. 
+#' @param gc_content Numeric vector. Allowed GC content range of guides, e.g. c(0.4, 0.8) blacklists guides with GC content lower and higher than 40% and 80%, respectively 
+#' @param min_Son Numeric. Minimal on target score of guides. Defaults to 10.
+#' @param min_Soff Numeric. Maximal off target score of guides. Defaults to 50. 
+#' @param n_clust Single positive integer <= 20. Number of groups to cluster guideRNAs into. 
+#'   Higher \code{n_clust} usually gives better results but comes with a speed penalty. 
+#' @param consensus_range DataFrame with repname, start, and end columns. Discards guideRNAs targeting parts outside of \code{consensus_range} on the consensus.
+#' @param PAM Character. Currently only 'NGG' PAM is supported.
+#' @param lower_count Numeric. Passed to jellyfish kmer counting. Only kmers occuring at least \code{lower_count} times are considered.
+#' @param force Logical. If \code{TRUE}, overwrite existing guides.
+#' @return Returns a guideSet object containing guides.
 #' @examples
-#' gs <- createGuideSet(Hsapiens)
-#' gs <- addTargets(targets = c('LTR12C', 'LTR12E'), alignment = TRUE)
 #' @export
 addGuides <- function(guideSet, 
                       n_mismatches = 0, 
                       guide_length = 19, 
                       gc_content = c(0.4, 0.8),
                       min_Son = 10,
-                      max_Soff = Inf,
+                      max_Soff = 50,
                       consensus_range = NULL,
                       n_clust = 15,
                       method = 'max',
                       coeff = 1,
                       PAM = 'NGG',
+                      lower_count = 5,
                       force = FALSE)
 {
   if(!n_mismatches %in% c(0, 1, 2, 3)) { stop('Mismatches must be 0, 1, 2, or 3') }
@@ -158,7 +159,7 @@ addGuides <- function(guideSet,
   guideSet@guide_length <- guide_length
   guideSet@PAM <- PAM
   
-  guideSet <- .bowtie(guideSet, n_mismatches = n_mismatches)
+  guideSet <- .bowtie(guideSet, n_mismatches, lower_count)
   guideSet <- annoGuides(guideSet)
   guideSet <- selGuides(guideSet, min_Son = min_Son, max_Soff = max_Soff, consensus_range = consensus_range, gc_content = gc_content)
   guideSet <- clustGuides(guideSet, n_clust = n_clust)
@@ -170,24 +171,18 @@ addGuides <- function(guideSet,
 
 #' Add targets to a guideSet object.
 #'
-#' Adds target loci you want to design guideRNAs against.
-#' 
-#' @param guideSet guideSet object to add targets to. 
-#' @param targets Character or GRanges. Either names of repeat families or GRanges object with target coordinates.
-#' @param alignment Boolean. Should a rough multiple sequence alignment and consensus sequence be added? 
-#'   Useful for inspecting or targeting specific parts of a family.
+#' @param guideSet guideSet object containing genome annotation. 
+#' @param targets Character vector or GRanges object. Either identifier of repeat families or GRanges object with target coordinates.
 #' @param blacklist Boolean. Should targets overlapping cis regulatory regions be blacklisted. False by default.
 #' @param blacklist_dist Integer >= 0. Minimum basepair distance of target loci to cis regulatory regions.
-#' 
-#' @return Returns a guideSet object 
+#' @param force. If \code{TRUE}, overwrites existing results.
+#' @return Returns a guideSet object containing targets
 #' @examples
-#' gs <- createGuideSet(Hsapiens)
-#' gs <- addTargets(targets = c('LTR12C', 'LTR12E'), alignment = TRUE)
+#' guideSet <- addTargets(guideSet, targets = c('LTR12C', 'LTR12E'))
 #' @export
 addTargets <- function(
                        guideSet,
                        targets = NULL, # either repnames, GRanges with coords, or seqs
-                       max_gap_freq = 0.8,
                        blacklist = FALSE, 
                        min_dist = 0,
                        force = FALSE
