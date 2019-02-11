@@ -237,7 +237,7 @@ clustGuides <- function(guideSet,
   # Write target seqs to file for jellyfish
   Biostrings::writeXStringSet(guideSet@targets$seq, filepath = seq_file, format = 'fasta')
   
-  jellyfish_path <- system.file(package = 'Repguide', 'inst', 'bin', 'jellyfish-linux')
+  jellyfish_path <- system.file(package = 'Repguide', 'bin', 'jellyfish-linux')
   
   cmd <- glue::glue("{jellyfish_path} count --mer-len {kmer_length} --size 100M --threads {n_cores} --out-counter-len 0 --lower-count {lower_count} --text {seq_file} --output {kmers_file} ")
   system(command = cmd)
