@@ -5,34 +5,37 @@
 \title{Add guides to a guideSet object.}
 \usage{
 addGuides(guideSet, n_mismatches = 0, guide_length = 19,
-  gc_content = c(0.4, 0.8), min_Son = 10, max_Soff = Inf,
+  gc_content = c(0.4, 0.8), min_Son = 10, max_Soff = 50,
   consensus_range = NULL, n_clust = 15, method = "max", coeff = 1,
-  PAM = "NGG", force = FALSE)
+  PAM = "NGG", lower_count = 5, force = FALSE)
 }
 \arguments{
 \item{guideSet}{guideSet object with targets.}
 
 \item{n_mismatches}{Single integer of either 0, 1, 2, or 3. Maximal number of tolerated mismatches when assessing guideRNA binding targets. Defaults to 0.}
 
-\item{guide_length}{Single integer between 10 and 30. Basepair size of the guideRNAs. 
-A spacer length of 19 (the default) has been optimal in 'Sequence determinants of improved CRISPR sgRNA design', 
-  but shorter guides may result in fewer actual off-targets 'Improving CRISPR-Cas nuclease specificity using truncated guide RNAs'}
+\item{guide_length}{Single integer between 15 and 25. Basepair size of the guideRNAs. Defaults to 19.}
 
-\item{consensus_range}{DataFrame with repname, start, and end columns. Discard guideRNAs targeting parts outside of \code{consensus_range} on the consensus.}
+\item{gc_content}{Numeric vector. Allowed GC content range of guides, e.g. c(0.4, 0.8) blacklists guides with GC content lower and higher than 40% and 80%, respectively}
 
-\item{PAM}{Character. Currently only 'NGG' PAMs are supported.}
+\item{min_Son}{Numeric. Minimal on target score of guides. Defaults to 10.}
 
-\item{min_targets}{Single integer >= 0. Discard guideRNAs with less than \code{min_targets} hits on target.}
+\item{consensus_range}{DataFrame with repname, start, and end columns. Discards guideRNAs targeting parts outside of \code{consensus_range} on the consensus.}
 
-\item{max_off_targets}{Single integer >= 0. Discard guideRNAs with more than \code{max_off_targets} off target hits.}
+\item{n_clust}{Single positive integer <= 20. Number of groups to cluster guideRNAs into. 
+Higher \code{n_clust} usually gives better results but comes with a speed penalty.}
+
+\item{PAM}{Character. Currently only 'NGG' PAM is supported.}
+
+\item{lower_count}{Numeric. Passed to jellyfish kmer counting. Only kmers occuring at least \code{lower_count} times are considered.}
+
+\item{force}{Logical. If \code{TRUE}, overwrite existing guides.}
+
+\item{min_Soff}{Numeric. Maximal off target score of guides. Defaults to 50.}
 }
 \value{
-Returns a guideSet object
+Returns a guideSet object containing guides.
 }
 \description{
 Adds all potential guideRNAs against the targets of interest.
-}
-\examples{
-gs <- createGuideSet(Hsapiens)
-gs <- addTargets(targets = c('LTR12C', 'LTR12E'), alignment = TRUE)
 }

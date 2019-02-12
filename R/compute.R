@@ -260,7 +260,7 @@ compStats <- function(kmers)
   seqs_bin <- ape::as.DNAbin(seqs)
   clusts <- 
     tibble(te_id = names(seqs), 
-                 clust = cutree(fastcluster::hclust(tgs_dist(kmer::kcount(seqs_bin, k = kmer_length)), 'ward.D2'), n_clust))
+                 clust = cutree(fastcluster::hclust(tgstat::tgs_dist(kmer::kcount(seqs_bin, k = kmer_length)), 'ward.D2'), n_clust))
   clust_sizes <- count(clusts, clust)
     
   # sample ids per clust proportional to clust size

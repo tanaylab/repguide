@@ -1,30 +1,30 @@
----
-output:
-  md_document:
-    variant: markdown_github
----
+Repguide
+========
 
-```{r, echo = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  fig.path = "README-"
-)
-```
-
-# Repguide
-
-The Repguide R package facilitates the design of guideRNAs for CRISPR/dCas9 targeting of repetitive DNA sequences, such as those derived from transposable elements.
-The basic workflow consists of chosing the target sites, computating and scoring guideRNAs, and finding the optimal combination of multiple guides to maximize and minimize on- and off-targeting, respectively.
-More details on the usage of the Repguide pipeline is available in the package vignette.
+The Repguide R package facilitates the design of guideRNAs for
+CRISPR/dCas9 targeting of repetitive DNA sequences, such as those
+derived from transposable elements. The basic workflow consists of
+selecting the target sites, computing and scoring guideRNAs, and finding
+the optimal combination of multiple guides to maximize and minimize on-
+and off-targeting, respectively. More details on the usage of the
+Repguide pipeline is available on the Repguide
+[homepage](https://tanaylab.bitbucket.io/Repguide/index.html) and the
+package
+[vignette](https://tanaylab.bitbucket.io/Repguide/articles/Repguide.html)
 
 #### Installation
 
-Make sure you have BiocManager and devtools installed. Then run:
-```{r, eval=FALSE}
-options(repos = c(getOption("repos"), BiocManager::repositories()))
+``` r
+# Install BiocManager, devtools, and tgstat (in case you haven't already)
+install.packages('BiocManager')
+install.packages('devtools')
 install.packages('tgstat', repos=c(getOption('repos'), 'https://tanaylab.bitbucket.io/repo'))
+
+# Install Repguide
+options(repos = c(getOption("repos"), BiocManager::repositories()))
 devtools::install_bitbucket('tanaylab/repguide', ref='default')
 ```
 
-NOTE: Repguide currently requires Unix environment.
+NOTE: Repguide currently requires Unix environment. In particular it
+uses the Tanay group tgstat library that utilizes shared memory and
+distributed computing (as well as some specific optional CPU features).

@@ -9,7 +9,12 @@ listFamilies(guideSet, repclass = NULL, low_complexity = FALSE)
 \arguments{
 \item{guideSet}{guideSet object to query.}
 
+\item{low_complexity}{Logical. Should low complexity families be returned.}
+
 \item{class}{Character. Only show families belonging to \code{class}.}
+}
+\value{
+Character vector.
 }
 \description{
 Retrieves all available families in the provided guideSet that match defined characteristics.

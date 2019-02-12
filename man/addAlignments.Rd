@@ -5,13 +5,24 @@
 \title{Add multiple sequence alignment to guideSet object}
 \usage{
 addAlignments(guideSet, files = NULL, max_gap_freq = 0.8,
-  force = FALSE)
+  iterations = 2, refinements = 1, force = FALSE)
 }
 \arguments{
-\item{guideSet}{guideSet with targets}
+\item{guideSet}{guideSet containing targets}
 
-\item{file}{String}
+\item{files}{data.frame. Requires columns 'repname' and 'path' storing family identifiers and paths to the multiple sequence alignment, respectively.}
+
+\item{max_gap_freq}{Numeric. Removes positions on alignment with higher gap (-) frequency than \code{max_gap_freq}.}
+
+\item{iterations}{Numeric. Passed to AlignSeqs from DECIPHER package.}
+
+\item{refinements}{Numeric. Passed to AlignSeqs from DECIPHER package.}
+
+\item{force}{Logical. If TRUE, overwrites existing alignments.}
+}
+\value{
+Returns a guideSet object with alignments.
 }
 \description{
-Either calculates multiple sequence alignment and consensus sequence or imports from external file
+Calculates rough multiple sequence alignment and consensus sequence or imports from external file
 }

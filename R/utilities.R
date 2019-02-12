@@ -210,12 +210,12 @@ clustGuides <- function(guideSet,
   kmer_cors <- as.matrix(qlcMatrix::cosSparse(t(mat_full)))
   #kmer_cors <- tgs_cor(as.matrix(t(mat_full)), spearman = TRUE)
   kmer_clusts <- tibble(kmer_id = as.numeric(rownames(mat_full)),
-                        kmer_clust = as.numeric(cutree(fastcluster::hclust(tgs_dist(kmer_cors), 'ward.D2'), n_clust)))
+                        kmer_clust = as.numeric(cutree(fastcluster::hclust(tgstat::tgs_dist(kmer_cors), 'ward.D2'), n_clust)))
                           
   print(paste0('Clustering ', ncol(mat_full), ' loci into ', n_clust, ' groups'))
   loci_cors <- as.matrix(qlcMatrix::cosSparse(mat_full))
   loci_clusts <- tibble(te_id = as.numeric(colnames(mat_full)),
-                        te_clust = as.numeric(cutree(fastcluster::hclust(tgs_dist(loci_cors), 'ward.D2'), n_clust)))   
+                        te_clust = as.numeric(cutree(fastcluster::hclust(tgstat::tgs_dist(loci_cors), 'ward.D2'), n_clust)))   
 
   kmers <- left_join(kmers, kmer_clusts, by = 'kmer_id') %>% left_join(., loci_clusts, by = 'te_id')                        
   guideSet@kmers$kmer_clust <- kmers$kmer_clust

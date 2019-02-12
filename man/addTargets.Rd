@@ -4,28 +4,26 @@
 \alias{addTargets}
 \title{Add targets to a guideSet object.}
 \usage{
-addTargets(guideSet, targets = NULL, max_gap_freq = 0.8,
-  blacklist = FALSE, min_dist = 0, force = FALSE)
+addTargets(guideSet, targets = NULL, blacklist = FALSE, min_dist = 0,
+  force = FALSE)
 }
 \arguments{
-\item{guideSet}{guideSet object to add targets to.}
+\item{guideSet}{guideSet object containing genome annotation.}
 
-\item{targets}{Character or GRanges. Either names of repeat families or GRanges object with target coordinates.}
+\item{targets}{Character vector or GRanges object. Either identifier of repeat families or GRanges object with target coordinates.}
 
 \item{blacklist}{Boolean. Should targets overlapping cis regulatory regions be blacklisted. False by default.}
 
-\item{alignment}{Boolean. Should a rough multiple sequence alignment and consensus sequence be added? 
-Useful for inspecting or targeting specific parts of a family.}
-
 \item{blacklist_dist}{Integer >= 0. Minimum basepair distance of target loci to cis regulatory regions.}
+
+\item{force.}{If \code{TRUE}, overwrites existing results.}
 }
 \value{
-Returns a guideSet object
+Returns a guideSet object containing targets
 }
 \description{
-Adds target loci you want to design guideRNAs against.
+Add targets to a guideSet object.
 }
 \examples{
-gs <- createGuideSet(Hsapiens)
-gs <- addTargets(targets = c('LTR12C', 'LTR12E'), alignment = TRUE)
+guideSet <- addTargets(guideSet, targets = c('LTR12C', 'LTR12E'))
 }

@@ -4,26 +4,23 @@
 \alias{addCombinations}
 \title{Add guideRNA combinations to guideSet object.}
 \usage{
-addCombinations(guideSet, n_guides = 5, method = c("max", "min",
+addCombinations(guideSet, max_guides = 5, method = c("max", "min",
   "ratio", "regression"), coeff = 1, force = FALSE)
 }
 \arguments{
-\item{guideSet}{guideSet object with kmers.}
+\item{guideSet}{guideSet object containing guides.}
+
+\item{max_guides}{Numeric. Maximum number of distinct guides to consider when calculating combinations.}
 
 \item{method}{String. Method of how to pick the best guideRNA per cluster.}
 
 \item{coeff}{Integer. If \code{method} is \code{regression}, \code{coeff} modifies the slope of the linear regression.}
 
-\item{n_clust}{Single positive integer <= 20. Number of groups to cluster guideRNAs into. 
-Higher \code{n_clust} usually gives better results but comes with a speed penalty.}
+\item{force}{Logical. If \code{TRUE}, overwrites existing results}
 }
 \value{
-Returns a guideSet object
+Returns a guideSet object with combinations.
 }
 \description{
 Selects set of non-redundant guideRNAs and computes all potential combinations against targets of interest.
-}
-\examples{
-gs <- createGuideSet(Hsapiens)
-gs <- addTargets(targets = c('LTR12C', 'LTR12E'), alignment = TRUE)
 }

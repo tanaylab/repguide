@@ -1,5 +1,5 @@
 ---
-title: "Repguide user's guide"
+title: "Repguide vignette"
 author: "David Brocks"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
@@ -80,8 +80,8 @@ Example naming of the human hg38 bowtie indeces:
 ## Creating a guideSet
 We start the workflow by creating a _guideSet_ object, which is a S4 class to store genomic information and the results of later functions.
 
-To create a new _guideSet_ object, we have to define the genome assembly and provide annotation on transposable elements and cis regulatory features (e.g. promoters/enhancers) which is optional but highly recommended for optimal guideRNA design. In this tutorial, we will use the hg38 UCSC repeatmasker and FANTOM5 TSS annotation provided with the Repguide package. You can provide the path to the corresponding bowtie index directory as the `refdir` parameter. `refdir = NULL` (the default) will search for bowtie indeces in the __Repguide__ installation directory and create the indeces if not found (takes a few hours).
-```{r}
+To create a new _guideSet_ object, we have to define the genome assembly and provide annotation on transposable elements and cis regulatory features (e.g. promoters/enhancers) which is optional but highly recommended for optimal guideRNA design. In this tutorial, we will use the hg38 UCSC repeatmasker and FANTOM5 TSS annotation provided with the __Repguide__ package. You can provide the path to the corresponding bowtie index directory as the `refdir` parameter. `refdir = NULL` (the default) will search for bowtie indeces in the __Repguide__ installation directory and create the indeces if not found (takes a few hours).
+```{r, warning = FALSE}
 # Path to FANTOM5 hg38 TSS bed file (provided)
 tss_path <- system.file(package = 'Repguide', 'extdata', 'hg38_fair+new_CAGE_peaks_phase1and2.bed.gz')
 # Path to RepeatMasker hg38 repeat annotation (provided, LTRs only)
@@ -118,8 +118,10 @@ To inspect targeted families more closely or to design guideRNAs against specifi
 ```{r, warning = FALSE}
 # Path to data directory containg multiple sequence alignment files
 data_dir <- system.file(package = 'Repguide', 'extdata')
+
 # Return paths to files ending with *.fasta.gz in that data directory
 msa_files <- dir(data_dir, full = TRUE, pattern = 'fasta.gz$')
+
 # Create data.frame with repname and corresponding file path
 msa_df <- data.frame('repname' = c('LTR12B', 'LTR12D'), 'path' = msa_files)
 msa_df
@@ -205,7 +207,7 @@ knitr::include_graphics(img1_path)
 # References
 [1] Breaking-Cas-interactive design of guide RNAs for CRISPR-Cas experiments for ENSEMBL genomes  
 [2] Guillaume Marcais and Carl Kingsford, A fast, lock-free approach for efficient parallel counting of occurrences of k-mers. Bioinformatics (2011) 27(6): 764-770  
-[3]
+[3]  
 [4]  
 
 # Session information

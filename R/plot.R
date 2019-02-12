@@ -518,7 +518,7 @@ plotGuides <- function(guideSet)
 #' @export
 plotCombinations <- function(guideSet)
 { 
-  if (length(guideSet@combinations)) { stop ('Call addCombinations on guideSet before calling plotCombinations') }
+  if (length(guideSet@combinations) == 0) { stop ('Call addCombinations on guideSet before calling plotCombinations') }
   combinations <- guideSet@combinations 
   kmers <- 
     guideSet@kmers %>%
