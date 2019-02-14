@@ -1,8 +1,7 @@
 # Consider using 'I4!=======44444+++++++' weighted phred from https://github.com/mhorlbeck/CRISPRiaDesign/blob/master/Library_design_walkthrough.md
 # add guide mother seq performance could be improved using data.table
 .bowtie <- function(guideSet,
-                    n_mismatches = 0,
-                    lower_count = 2)
+                    n_mismatches = 0)
 {
   genome <- guideSet@genome
   index_dir <- guideSet@refdir
@@ -10,7 +9,7 @@
   kmers_file <- tempfile()
   align_file <- tempfile()
   
-  kmers <- .jellyfish(guideSet, lower_count)
+  kmers <- guideSet@kmers$seq_guide
   fwrite(list(kmers), kmers_file)
   
   index_id <- genome@pkgname
@@ -30,7 +29,7 @@
   kmers_mapped <- importKmers(align_file)
   
   kmers_mapped$guide_seq <- # add guide mother seq
-    left_join(kmers_mapped %>% as_tibble, 
+    left_join(as_tibble(kmers_mapped), 
               tibble(guide_seq = kmers, kmer_id = 0:(length(kmers) -1)), 
               by = 'kmer_id') %>%
     pull(guide_seq)
@@ -186,12 +185,14 @@ clustGuides <- function(guideSet,
                         n_clust = 15)
 {
   if(n_clust > 20) { stop('Maximal 20 clusters currently supported') }
-  
+  message('Clustering kmers')
   kmers <- as_tibble(guideSet@kmers) %>% select(-matches('kmer_clust|te_clust'))
   kmers_filt <- 
     kmers %>%
     filter(Son > min_Son & on_target == 1) %>%
     filter(valid)
+    
+  if (nrow(kmers_filt) == 0) { stop ('No valid guides found, try relaxing selection parameters of addGuides function') }
     
   mat_full <- 
     kmers_filt %>%
@@ -204,7 +205,7 @@ clustGuides <- function(guideSet,
     # filter(on_target >= 0) %>%
     # mutate(on_target = on_target * Sbind) %>%
     # select(kmer_id, te_id, on_target) %>%
-    # guideR::tidyToSparse()  
+    # tidyToSparse()  
 
   print(paste0('Clustering ', nrow(mat_full), ' kmers into ', n_clust, ' groups'))
   kmer_cors <- as.matrix(qlcMatrix::cosSparse(t(mat_full)))
@@ -250,7 +251,8 @@ clustGuides <- function(guideSet,
     as_tibble %>%
     pull(V1)
     
-  return(kmers_filt)
+  guides(guideSet) <- GRanges(seqnames = 1:length(kmers_filt), ranges = 1:length(kmers_filt), seq_guide = kmers_filt)
+  return(guideSet)
 }   
 
 makeGRangesFromDataFramePar <- function(df, keep.extra.columns = FALSE, n_cores = NULL)
@@ -295,21 +297,6 @@ makeGRangesFromDataFramePar <- function(df, keep.extra.columns = FALSE, n_cores 
 	rownames(data_sparse) = levels(data$a)
 	
 	return(data_sparse)
-}
-
-kmersToCov <- function(kmers, guide_length = 19) # input Kmer annotation df
-{
-  te_id_cov <-
-    kmers %>% 
-    select(te_id, pos_in_loc) %>% 
-    mutate(pos = 1, rep = guide_length) %>% 
-    uncount(rep) %>% 
-    mutate(pos = rep(1:guide_length, times = nrow(.)/guide_length), 
-           pos = pos + pos_in_loc - 1) %>% 
-      select(-pos_in_loc) %>% 
-    count(te_id, pos)
-	
-  return(te_id_cov)
 }
 
 .tibToM = function(tib) # takes as input a tibble with first column as rownames

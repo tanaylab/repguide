@@ -1,7 +1,7 @@
 annoGuides <- function(guideSet)
 {
   guide_length <- guideSet@guide_length
-  genomic_bins <- binGenome(guideSet@genome, bin_width = 250)
+  genomic_bins <- binGenome(guideSet@genome, bin_width = 500)
   kmers <- guideSet@kmers 
   anno_te <- guideSet@tes
   targets <- guideSet@targets
@@ -51,7 +51,7 @@ annoGuides <- function(guideSet)
   kmers$gc <- round(kmer_gc / guide_length, 2) 
   
   # Export results
-  guideSet@kmers <- makeGRangesFromDataFrame(kmers, keep.extra.columns = TRUE)
+  guideSet@kmers <- makeGRangesFromDataFrame(kmers, keep.extra.columns = TRUE) # Could be improved
   
   # Add position on consensus for kmers
   if (length(guideSet@alignments) != 0)

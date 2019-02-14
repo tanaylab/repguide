@@ -35,10 +35,17 @@ selGuides <- function(guideSet,
     pull(kmer_id) %>%
     unique
     
+  kmers_blacklist_valid <-
+    kmers %>%
+    filter(!kmer_id %in% unique(subsetByOverlaps(guideSet@kmers, guideSet@blacklist, ignore.strand = TRUE)$kmer_id)) %>%
+    pull(kmer_id) %>%
+    unique
+    
   guideSet@kmers$on_target <- kmers$on_target
   guideSet@kmers$valid_gc <- guideSet@kmers$kmer_id %in% kmers_gc_valid
   guideSet@kmers$valid_score <- guideSet@kmers$kmer_id %in% kmers_score_valid
-  guideSet@kmers$valid <- guideSet@kmers$valid_gc + guideSet@kmers$valid_score == 2
+  guideSet@kmers$valid_blacklist <- guideSet@kmers$kmer_id %in% kmers_blacklist_valid
+  guideSet@kmers$valid <- guideSet@kmers$valid_gc + guideSet@kmers$valid_score + guideSet@kmers$valid_blacklist == 3
 
   return(guideSet)  
 }

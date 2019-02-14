@@ -4,13 +4,16 @@
 \alias{addGuides}
 \title{Add guides to a guideSet object.}
 \usage{
-addGuides(guideSet, n_mismatches = 0, guide_length = 19,
-  gc_content = c(0.4, 0.8), min_Son = 10, max_Soff = 50,
-  consensus_range = NULL, n_clust = 15, method = "max", coeff = 1,
-  PAM = "NGG", lower_count = 5, force = FALSE)
+addGuides(guideSet, guides = NULL, n_mismatches = 0,
+  guide_length = 19, gc_content = c(0.4, 0.8), min_Son = 10,
+  max_Soff = 50, consensus_range = NULL, n_clust = 11,
+  method = "max", coeff = 1, PAM = "NGG", lower_count = 5,
+  force = FALSE)
 }
 \arguments{
 \item{guideSet}{guideSet object with targets.}
+
+\item{guides}{Character. Optional vector of pre-computed guideRNA sequences to map and annotate. Will restrict downstream analysis to this set of guides.}
 
 \item{n_mismatches}{Single integer of either 0, 1, 2, or 3. Maximal number of tolerated mismatches when assessing guideRNA binding targets. Defaults to 0.}
 
@@ -27,7 +30,7 @@ Higher \code{n_clust} usually gives better results but comes with a speed penalt
 
 \item{PAM}{Character. Currently only 'NGG' PAM is supported.}
 
-\item{lower_count}{Numeric. Passed to jellyfish kmer counting. Only kmers occuring at least \code{lower_count} times are considered.}
+\item{lower_count}{Numeric. Passed to jellyfish kmer counting. Only kmers occuring at least \code{lower_count} times are considered for mapping.}
 
 \item{force}{Logical. If \code{TRUE}, overwrite existing guides.}
 

@@ -57,3 +57,28 @@ importKmers <- function(filepath = 'path to bowtie mapped kmers')
  
   return(kmers_gr)
 }
+
+.importOrNot <- function(variable, genome)
+{
+  if (class(variable) == 'character')
+  {
+    if (!fs::is_file(variable)) { stop ('tes, cis, black/whitelist must be path to existing bed file or GRanges object') }
+    if (grepl('bed.gz$', variable) | grepl('.bed$', variable)) 
+    { 
+      variable <- rtracklayer::import.bed(variable) 
+    } else {
+      variable <- importTEs(variable) 
+    }
+  }
+   
+  if (class(variable) == 'GRanges')
+  {
+    seqlevels(variable, pruning.mode = 'coarse') <- seqlevels(genome)    
+  } 
+
+  if (is.null(variable))
+  {
+    variable <- GRanges()
+  }
+  return(variable)
+}

@@ -1,8 +1,10 @@
-#' guideR
+#' Repguide
 #'
-#' @name guideR
+#' @name Repguide
 #' @docType package
 #' @import dplyr
+#' @import foreach
+#' @import GenomicRanges
 #' @import tidyr
 #' @import tibble
 #' @import ggplot2

@@ -4,8 +4,7 @@
 \alias{addTargets}
 \title{Add targets to a guideSet object.}
 \usage{
-addTargets(guideSet, targets = NULL, blacklist = FALSE, min_dist = 0,
-  force = FALSE)
+addTargets(guideSet, targets = NULL, force = FALSE)
 }
 \arguments{
 \item{guideSet}{guideSet object containing genome annotation.}

@@ -235,8 +235,9 @@ compStats <- function(kmers)
                      kmer_length = 7,
                      n_clust = 10,
                      clust_perc = 1,
-                     seed = NULL) # ultrafast but rough MSA
+                     seed = 19) # ultrafast but rough MSA
 {
+  set.seed(seed)
   if (class(seqs) == 'DNAStringSet') 
   {
     if (is.null(names(seqs))) 
@@ -286,7 +287,116 @@ compStats <- function(kmers)
   return(alignment_wo_gaps)
 }
 
+.compGreedy <- function(guideSet,
+                        iterations = 10)
+{
+  set.seed(guideSet@.seed)
+  kmers <- as_tibble(guideSet@kmers) %>% filter(valid) %>% mutate(kmer_id = as.character(kmer_id))
+  combinations <- guideSet@combinations %>% unnest
+  max_n_guides <- max(combinations$n_guides)
+  
+  if (max_n_guides > 1)
+  {
+    message('Running greedy optimization')
+    # Create the score matrix
+    mat <- 
+      kmers %>%
+      mutate(score = ifelse(on_target == 1, Son, Soff)) %>%
+      select(kmer_id, unique_id, score) %>%
+      .tidyToSparse() %>%
+      as.matrix
+    on_indeces <- which(colnames(mat) %in% unique(kmers$unique_id[kmers$on_target == 1]))
+    off_indeces <- which(colnames(mat) %in% unique(kmers$unique_id[kmers$on_target == -1]))
+    mat[mat > 1] <- 1 # ceil indv loci score at 1 
+    
+    report <- foreach::foreach (nguides = 2:max_n_guides, .combine = rbind) %dopar%
+    {
+      # Get current best combination and calc stats
+      kmers_best <- combinations %>% filter(n_guides == nguides & best) %>% pull(kmer_id) %>% as.character()
+      #kmers_best <- sample(rownames(mat), nguides)
+      score_all_best <- matrixStats::colMaxs(mat[kmers_best, ])
+      score_on_best  <- sum(score_all_best[on_indeces])
+      score_off_best <- sum(score_all_best[off_indeces])
+      
+      # Run greedy search
+      df <- tibble(iterations = 1:iterations,
+                   Son_tot = score_on_best,
+                   Soff_tot = score_off_best,
+                   n_guides = nguides,
+                   kmer_id = list(kmers_best))
+           
+      for (i in 1:iterations)
+      {
+        #print(i)
+        
+        #print(structure(c(nguides, i, score_on_best, score_off_best), 
+        #                names = c('N_guides', 'Iteration', 'Son_tot', 'Soff_tot')))
+       
+        # Throw one kmer randomly
+        kmers_subs <- sample(kmers_best, length(kmers_best) -1)
+        
+        # Score kmer subset
+        kmers_subs_score <- if (length(kmers_subs) == 1) { mat[kmers_subs,] } else { matrixStats::colMaxs(mat[kmers_subs, ]) }
+       
+        # Score delta against all kmers
+        score_delta <- t(t(mat) - kmers_subs_score)
+        score_delta[score_delta < 0] <- 0
+        
+        # Add best other kmer
+        kmers_new <- c(kmers_subs, names(which.max(rowSums(score_delta))))
+        
+        # Score new subset
+        score_all_new <- matrixStats::colMaxs(mat[kmers_new, ])
+        score_on_new  <- sum(score_all_new[on_indeces])
+        score_off_new <- sum(score_all_new[off_indeces])
+            
+        # Update kmers if optimized
+        if (score_on_new > score_on_best)
+        {
+          kmers_best <- kmers_new
+          score_on_best <- score_on_new
+          score_off_best <- score_off_new
+        }
+        if (score_on_new == score_on_best & score_off_new < score_off_best)
+        {
+          kmers_best <- kmers_new
+          score_off_best <- score_off_new   
+        }
+        
+        # Update results df
+        df[i, 'Son_tot']  <- score_on_best
+        df[i, 'Soff_tot'] <- score_off_best
+        df[i, 'kmer_id'][[1]][[1]]  <- kmers_best
+      }
+      
+      return(df)
+    }
+      
+    #report %>% ggplot(aes(iterations, Son_tot)) + geom_point() + facet_wrap(~n_guides, scales = 'free')
+    
+    # format report to match combinations for binding
+    greedy_res <-
+      report %>% 
+      unnest %>% 
+      group_by(iterations, n_guides) %>% 
+        mutate(on_tot = sum(colSums(mat[kmer_id, on_indeces] != 0)!=0),
+               off_tot = sum(colSums(mat[kmer_id, off_indeces] != 0)!=0)) %>%
+      ungroup %>%
+      mutate(kmer_id = as.double(kmer_id),
+             enr = ifelse(Soff_tot == 0, (Son_tot) / (Soff_tot + 0.01), Son_tot / Soff_tot),
+             best = iterations == max(iterations),
+             combi_id = paste0(n_guides, 'V', iterations, '_greedy'))
 
-
+    # Update combinations
+    combinations <- 
+      combinations %>% 
+      filter(!best | n_guides == 1) %>%
+      bind_rows(., greedy_res) %>%
+      nest(kmer_id, .key = 'kmer_id')
+  }
+  guideSet@combinations <- combinations
+  return(guideSet)
+}
+  
 
 

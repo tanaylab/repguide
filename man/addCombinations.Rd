@@ -4,13 +4,18 @@
 \alias{addCombinations}
 \title{Add guideRNA combinations to guideSet object.}
 \usage{
-addCombinations(guideSet, max_guides = 5, method = c("max", "min",
-  "ratio", "regression"), coeff = 1, force = FALSE)
+addCombinations(guideSet, max_guides = 5, greedy = TRUE,
+  iterations = 10, method = c("max", "min", "ratio", "regression"),
+  coeff = 1, force = FALSE)
 }
 \arguments{
 \item{guideSet}{guideSet object containing guides.}
 
 \item{max_guides}{Numeric. Maximum number of distinct guides to consider when calculating combinations.}
+
+\item{greedy}{Logical. If \code{TRUE} (the default), performs an additional greedy optimization for selected guide combinations.}
+
+\item{iterations}{Integer > 0. Number of greedy search iterations. Usually 10 iterations are sufficient for convergence.}
 
 \item{method}{String. Method of how to pick the best guideRNA per cluster.}
 

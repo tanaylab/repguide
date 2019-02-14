@@ -4,8 +4,9 @@
 \alias{createGuideSet}
 \title{Creates a new guideSet object}
 \usage{
-createGuideSet(genome, alt_chromosomes = FALSE, tes = GRanges(),
-  cis = GRanges(), n_cores = NULL, refdir = "", seed = 19)
+createGuideSet(genome, alt_chromosomes = FALSE, tes = NULL,
+  cis = NULL, blacklist = NULL, whitelist = NULL, n_cores = NULL,
+  refdir = "", seed = 19)
 }
 \description{
 Creates a new guideSet object

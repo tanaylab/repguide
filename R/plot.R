@@ -47,7 +47,7 @@
               #plot.margin = unit(c(0, 0, 0, 0), "cm"),
               strip.background = element_blank(),
               strip.text.x = element_blank()) +
-        guides(col = guide_legend(ncol = 1))
+        ggplot2::guides(col = guide_legend(ncol = 1))
   }
   return(p_cpg_dens)
 }
@@ -145,92 +145,97 @@ plotMSA <- function(guideSet,
     as_tibble(guideSet@kmers) %>%
     filter(!is.na(kmer_clust) & !is.na(te_clust)) %>%
     filter(valid)
-  
-  #########################
-  # Sample Kmers and Loci #
-  #########################
-  if (nrow(kmers) > 5e6)
+    
+  if (nrow(kmers) > 0) 
   {
-    set.seed(guideSet@.seed)
-    kmers_slim <- kmers %>% select(kmer_id, te_id, kmer_clust, te_clust, best)
-    
-    kmers_subset <- 
-      kmers_slim %>% 
-      select(kmer_id, kmer_clust, best) %>%
-      distinct %>%
-      group_by(kmer_clust) %>% 
-      summarise(kmer_id = list(c(sample(kmer_id, round(n()/10)), kmer_id[best]))) %>% 
-      unnest %>% 
-      pull(kmer_id)
-
-    loci_subset <- 
-      kmers_slim %>% 
-      select(te_id, te_clust) %>%
-      distinct %>%
-      group_by(te_clust) %>% 
-      summarise(te_id = list(c(sample(te_id, round(n()/10))))) %>% 
-      unnest %>% 
-      pull(te_id)  
+    #########################
+    # Sample Kmers and Loci #
+    #########################
+    if (nrow(kmers) > 5e6)
+    {
+      set.seed(guideSet@.seed)
+      kmers_slim <- kmers %>% select(kmer_id, te_id, kmer_clust, te_clust, best)
       
-    kmers <- kmers %>% filter(te_id %in% loci_subset & kmer_id %in% kmers_subset)
-  }
-  
-  kmers_dt <- as.data.table(kmers, sorted = FALSE)
-  setkey(kmers_dt, 'kmer_id', 'te_id')
-  kmer_hit_score <- kmers_dt[, .(Son = max(Son),
-                                 kmer_clust = kmer_clust[1],
-                                 te_clust = te_clust[1]),
-                                 by = c('kmer_id', 'te_id')]
-  
-  # ggdata <-
-    # kmer_hit_score[order(kmer_clust)
-                 # ][, kmer_id := forcats::fct_inorder(as.character(kmer_id))
-                 # ][order(te_clust)
-                 # ][, te_id := forcats::fct_inorder(as.character(te_id))
-                 # ][, Slocus := cut(Son, breaks = c(0, 0.25, 0.5, 1), include.lowest = TRUE)]
-  
-  
-  ggdata <- # mildly slow
-    kmer_hit_score %>%
-    arrange(kmer_clust) %>% 
-    mutate(kmer_id = forcats::fct_inorder(as.character(kmer_id))) %>% 
-    arrange(te_clust) %>% 
-    mutate(te_id = forcats::fct_inorder(as.character(te_id))) %>%
-    mutate(Slocus = cut(Son, breaks = c(0, 0.25, 0.5, 1), include.lowest = TRUE))
+      kmers_subset <- 
+        kmers_slim %>% 
+        select(kmer_id, kmer_clust, best) %>%
+        distinct %>%
+        group_by(kmer_clust) %>% 
+        summarise(kmer_id = list(c(sample(kmer_id, round(n()/10)), kmer_id[best]))) %>% 
+        unnest %>% 
+        pull(kmer_id)
+
+      loci_subset <- 
+        kmers_slim %>% 
+        select(te_id, te_clust) %>%
+        distinct %>%
+        group_by(te_clust) %>% 
+        summarise(te_id = list(c(sample(te_id, round(n()/10))))) %>% 
+        unnest %>% 
+        pull(te_id)  
+        
+      kmers <- kmers %>% filter(te_id %in% loci_subset & kmer_id %in% kmers_subset)
+    }
     
-  # Plotting
-  row_clust_lines <- c(0, ggdata %>% count(kmer_id, kmer_clust) %>% count(kmer_clust) %>% pull(nn) %>% cumsum)
-  col_clust_lines <- c(0, ggdata %>% count(te_id, te_clust) %>% count(te_clust) %>% pull(nn) %>% cumsum)
-  
-  n_kmers <- length(unique(ggdata$kmer_id))
-  n_loci <- length(unique(ggdata$te_id))
-  
-  best_kmer_pos = which(levels(ggdata$kmer_id) %in% (kmers %>% filter(best) %>% pull(kmer_id) %>% unique))
-  
-  p_heatmap <- 
-    ggdata %>% 
-    ggplot(aes(te_id, kmer_id, fill = Slocus)) +
-      geom_raster() + 
-      scale_fill_manual(values = c('orange', 'darkred', 'purple'), drop = FALSE) +
-      #scale_fill_gradient2(low = 'blue', mid = 'lightgrey', high = 'red', midpoint = 0)
-      annotate('segment', x = 0, xend = n_loci, y = row_clust_lines, yend = row_clust_lines, lwd = 0.1) +
-      geom_vline(xintercept = col_clust_lines, lwd = 0.1) +
-      xlab(paste0('Sampled target loci (n = ', n_loci, ')')) +
-      ylab(paste0('Sampled guides (n = ', n_kmers, ')')) +
-      coord_cartesian(xlim = c(0, n_loci + round(n_loci / 100)), clip="off") +
-      annotate('segment', x = n_loci + round(n_loci / 100), xend = n_loci + 10, y = best_kmer_pos, yend = best_kmer_pos, 
-               lwd = 0.1, arrow = arrow(type = "open", length = unit(n_kmers/100000, "npc"))) +
-      #coord_fixed() +
-      theme(legend.position = 'bottom',
-            legend.key.width = unit(.3,"cm"),
-            legend.key.height = unit(.1,"cm"),
-            axis.text.x = element_blank(),
-            axis.ticks.x = element_blank(),
-            axis.text.y = element_blank(),
-            axis.ticks.y = element_blank(),
-            panel.grid.major = element_blank()) +
-            #plot.margin = unit(c(0, 0, 0, 0), "cm")) +
-      guides(fill = guide_legend(nrow = 1))
+    kmers_dt <- as.data.table(kmers, sorted = FALSE)
+    setkey(kmers_dt, 'kmer_id', 'te_id')
+    kmer_hit_score <- kmers_dt[, .(Son = max(Son),
+                                   kmer_clust = kmer_clust[1],
+                                   te_clust = te_clust[1]),
+                                   by = c('kmer_id', 'te_id')]
+    
+    # ggdata <-
+      # kmer_hit_score[order(kmer_clust)
+                   # ][, kmer_id := forcats::fct_inorder(as.character(kmer_id))
+                   # ][order(te_clust)
+                   # ][, te_id := forcats::fct_inorder(as.character(te_id))
+                   # ][, Slocus := cut(Son, breaks = c(0, 0.25, 0.5, 1), include.lowest = TRUE)]
+    
+    
+    ggdata <- # mildly slow
+      kmer_hit_score %>%
+      arrange(kmer_clust) %>% 
+      mutate(kmer_id = forcats::fct_inorder(as.character(kmer_id))) %>% 
+      arrange(te_clust) %>% 
+      mutate(te_id = forcats::fct_inorder(as.character(te_id))) %>%
+      mutate(Slocus = cut(Son, breaks = c(0, 0.25, 0.5, 1), include.lowest = TRUE))
+      
+    # Plotting
+    row_clust_lines <- c(0, ggdata %>% count(kmer_id, kmer_clust) %>% count(kmer_clust) %>% pull(nn) %>% cumsum)
+    col_clust_lines <- c(0, ggdata %>% count(te_id, te_clust) %>% count(te_clust) %>% pull(nn) %>% cumsum)
+    
+    n_kmers <- length(unique(ggdata$kmer_id))
+    n_loci <- length(unique(ggdata$te_id))
+    
+    best_kmer_pos = which(levels(ggdata$kmer_id) %in% (kmers %>% filter(best) %>% pull(kmer_id) %>% unique))
+    
+    p_heatmap <- 
+      ggdata %>% 
+      ggplot(aes(te_id, kmer_id, fill = Slocus)) +
+        geom_raster() + 
+        scale_fill_manual(values = c('orange', 'darkred', 'purple'), drop = FALSE) +
+        #scale_fill_gradient2(low = 'blue', mid = 'lightgrey', high = 'red', midpoint = 0)
+        annotate('segment', x = 0, xend = n_loci, y = row_clust_lines, yend = row_clust_lines, lwd = 0.1) +
+        geom_vline(xintercept = col_clust_lines, lwd = 0.1) +
+        xlab(paste0('Sampled target loci (n = ', n_loci, ')')) +
+        ylab(paste0('Sampled guides (n = ', n_kmers, ')')) +
+        coord_cartesian(xlim = c(0, n_loci + round(n_loci / 100)), clip="off") +
+        annotate('segment', x = n_loci + round(n_loci / 100), xend = n_loci + 10, y = best_kmer_pos, yend = best_kmer_pos, 
+                 lwd = 0.1, arrow = arrow(type = "open", length = unit(n_kmers/100000, "npc"))) +
+        #coord_fixed() +
+        theme(legend.position = 'bottom',
+              legend.key.width = unit(.3,"cm"),
+              legend.key.height = unit(.1,"cm"),
+              axis.text.x = element_blank(),
+              axis.ticks.x = element_blank(),
+              axis.text.y = element_blank(),
+              axis.ticks.y = element_blank(),
+              panel.grid.major = element_blank()) +
+              #plot.margin = unit(c(0, 0, 0, 0), "cm")) +
+        ggplot2::guides(fill = guide_legend(nrow = 1))
+  } else {
+    p_heatmap = ggplot() + annotate("text", x = 4, y = 25, size=8, label = 'No clustering provided')
+  }
   
   return(p_heatmap)
 }
@@ -276,7 +281,7 @@ plotMSA <- function(guideSet,
       ggdata %>% 
         ggplot(aes(pos, n, fill = repname)) + 
           geom_density(stat = 'identity', alpha = 0.5) +
-          guides(fill = guide_legend(ncol = 1)) +
+          ggplot2::guides(fill = guide_legend(ncol = 1)) +
         # geom_bar(stat = 'identity') + 
           facet_wrap(~repname, ncol = 1, scales = 'free', strip.position = 'right') +
           scale_y_continuous(breaks = .custom_breaks) +
@@ -331,7 +336,7 @@ plotTargets <- function(guideSet)
             legend.key.width = unit(.4,"cm"),
             legend.key.height = unit(.2,"cm"),
             legend.title = element_blank()) +
-      guides(fill = guide_legend(ncol = 1))
+      ggplot2::guides(fill = guide_legend(ncol = 1))
       
   # Plots the size distribution (density) per family    
   p_size_distr <-
@@ -381,14 +386,15 @@ plotGuides <- function(guideSet)
   
   p_guide_filt_counts <-
     kmers %>% 
-    select(kmer_id, valid_gc, valid_score, valid) %>% 
+    select(kmer_id, valid_gc, valid_score, valid_blacklist, valid) %>% 
     distinct %>% 
     summarise(all = n(), 
               pass_gc = sum(valid_gc), 
               pass_score = sum(valid_score), 
-              pass_both = sum(valid)) %>% 
+              pass_blacklist = sum(valid_blacklist),
+              pass_all = sum(valid)) %>% 
     gather() %>% 
-    mutate(key = factor(key, levels = c('all', 'pass_gc', 'pass_score', 'pass_both'))) %>% 
+    mutate(key = factor(key, levels = c('all', 'pass_gc', 'pass_score', 'pass_blacklist', 'pass_all')[order(value, decreasing = TRUE)])) %>% 
     ggplot(aes(key, value)) + 
       geom_bar(stat = 'identity') +
       theme(axis.text.x = element_text(angle=90, hjust=1),
@@ -451,7 +457,7 @@ plotGuides <- function(guideSet)
       ggplot() + 
         geom_histogram(aes(x = cis_dist, stat(count / scaling_fact)), binwidth = 150) +
         geom_line(aes(x = cis_dist, y = Scis), col = 'red', lty = 2) + # cis decay function
-        scale_y_continuous(name = 'Scis', sec.axis = sec_axis(~.*scaling_fact, name = 'Count')) + 
+        scale_y_continuous(limits = c(0, 5000), name = 'Scis', sec.axis = sec_axis(~.*scaling_fact, name = 'Count')) + 
         theme(legend.position = 'none')
   
   p_guide_hit_heatmap <- .plotClusts(guideSet)
@@ -468,7 +474,7 @@ plotGuides <- function(guideSet)
       #scale_shape_manual(values = c(4, 19)) +
       scale_alpha_manual(values = c(0.1, 1)) +
       scale_size_manual(values = c(0.1, 2)) +
-      guides(col = guide_legend(title = 'Cluster', ncol=2),
+      ggplot2::guides(col = guide_legend(title = 'Cluster', ncol=2),
              shape = FALSE,
              size = FALSE) +
       theme(axis.text.x = element_text(angle=90, hjust=1),
@@ -529,7 +535,8 @@ plotCombinations <- function(guideSet)
     mutate(Sbind_bin = cut(Sbind, breaks = c(0, 0.25, 0.5, 1), include.lowest = TRUE))
   
   n_fams <- length(guideSet@families)
-  n_guides_col <- colorRampPalette(c('gold', 'orange', 'darkred', 'black'))(max(kmers$n_guides))  
+  n_guides <- max(kmers$n_guides)
+  n_guides_col <- colorRampPalette(c('gold', 'orange', 'darkred', 'black'))(n_guides)  
 
   p_table <-
     combinations %>%
@@ -539,7 +546,6 @@ plotCombinations <- function(guideSet)
     as.matrix %>%
     t() %>% 
     gridExtra::tableGrob(., theme = gridExtra::ttheme_default(base_size = 8))
-
   
   .custom_breaks <- function(x) { c(0, floor(max(x))) }
   p_on_off_bar <- 
@@ -565,6 +571,36 @@ plotCombinations <- function(guideSet)
             legend.position = 'none',
             panel.spacing = unit(0.25, 'lines'))
             
+  if (sum(grepl('greedy', combinations$combi_id)))
+  {
+    .custom_breaks_x <- function(x) { round(x) }
+    .custom_breaks_y <- function(x) { c(ceiling(min(x)), floor(max(x))) }
+    p_greedy_iterations_on <-
+      combinations %>% 
+      filter(!is.na(iterations)) %>% 
+      ggplot(aes(iterations, Son_tot, col = as.factor(n_guides))) + 
+        geom_line() + 
+        geom_point(size = 0.5) +
+        scale_x_continuous(breaks = .custom_breaks_x) +
+        #scale_y_continuous(breaks = .custom_breaks_y) +
+        scale_color_manual(values = n_guides_col) +
+        theme(legend.position = 'none')
+    p_greedy_iterations_off <-
+      combinations %>% 
+      filter(!is.na(iterations)) %>% 
+      ggplot(aes(iterations, Soff_tot, col = as.factor(n_guides))) + 
+        geom_line() + 
+        geom_point(size = 0.5) +
+        scale_x_continuous(breaks = .custom_breaks_x) +
+        #scale_y_continuous(breaks = .custom_breaks_y) +
+        scale_color_manual(values = n_guides_col) +
+        theme(legend.position = 'none')
+  } else { 
+    p_greedy_iterations_on <- ggplot() + annotate("text", x = 4, y = 25, size=8, label = 'No greedy optimization') 
+    p_greedy_iterations_off <- p_greedy_iterations_on
+  }
+  p_greedy_iterations <- cowplot::plot_grid(p_greedy_iterations_on, p_greedy_iterations_off)
+  
   .custom_breaks <- function(x) { c(0, floor(max(x))) }
   p_offtarget_cov <- 
     kmers %>% 
@@ -574,7 +610,7 @@ plotCombinations <- function(guideSet)
     ungroup %>% 
     mutate(Sbind_bin = cut(Sbind, breaks = c(0, 0.5, 1, 2, 4, Inf), include.lowest = TRUE)) %>% 
     count(n_guides, repname, Sbind_bin) %>% 
-    mutate(repname = forcats::fct_lump(repname, n = min(c(5, n_fams - 1)), ties.method = 'first')) %>%
+    mutate(repname = forcats::fct_lump(repname, n = 4, ties.method = 'first')) %>%
     ggplot(aes(n_guides, n, fill = Sbind_bin)) + 
       geom_bar(stat = 'identity') + 
       scale_y_continuous(breaks = .custom_breaks) +
@@ -584,19 +620,27 @@ plotCombinations <- function(guideSet)
             legend.position = 'right',
             legend.key.width = unit(.3,"cm"),
             legend.key.height = unit(.3,"cm")) +
-      guides(fill = guide_legend(title = 'Sbind', ncol = 1))
+      ggplot2::guides(fill = guide_legend(title = 'Sbind', ncol = 1))
   
-  p_offtarget_dist <-
+  # Plot offtarget dist histogram
+  ggdata <- 
     kmers %>% 
     filter(on_target < 0) %>% 
-    filter(cis_dist < 5000) %>%
-    ggplot(aes(cis_dist, fill = as.factor(n_guides))) + 
-      geom_histogram(binwidth = 250) + 
-      facet_wrap(~n_guides, nrow = 1) + 
-      xlim(0, 5000) +
-      scale_fill_manual(values = n_guides_col) +
-      theme(legend.position = 'none',
-            axis.text.x = element_text(angle = 90))
+    filter(cis_dist < 5000)
+  if (nrow(ggdata) > 0)
+  {
+    p_offtarget_dist <-
+      ggdata %>%
+      ggplot(aes(cis_dist, fill = as.factor(n_guides))) + 
+        geom_histogram(binwidth = 250) + 
+        facet_wrap(~n_guides, nrow = 1) + 
+        xlim(0, 5000) +
+        scale_fill_manual(values = n_guides_col) +
+        theme(legend.position = 'none',
+              axis.text.x = element_text(angle = 90))
+  } else {
+    p_offtarget_dist <- ggplot() + annotate("text", x = 4, y = 25, size=8, label = 'No cis proximal off targets')   
+  }
   
   p_target_cov <- 
     kmers %>% 
@@ -613,7 +657,7 @@ plotCombinations <- function(guideSet)
             legend.position = 'right',
             legend.key.width = unit(.3,"cm"),
             legend.key.height = unit(.3,"cm")) +
-      guides(fill = guide_legend(title = 'Sbind', ncol = 1))
+      ggplot2::guides(fill = guide_legend(title = 'Sbind', ncol = 1))
 
   # p_cis_hist <-   
     # kmers %>%
@@ -668,25 +712,27 @@ plotCombinations <- function(guideSet)
         
   
   plots <- list('a' = p_table, 
-                'b' = p_on_off_bar, 
-                'c' = p_score_scatter, 
-                'd' = p_offtarget_cov, 
-                'e' = p_offtarget_dist, 
-                'f' = p_target_cov,
-                'g' = p_cons_cov) 
+                'b' = p_greedy_iterations,
+                'c' = p_on_off_bar, 
+                'd' = p_score_scatter, 
+                'e' = p_offtarget_cov, 
+                'f' = p_offtarget_dist, 
+                'g' = p_target_cov,
+                'h' = p_cons_cov) 
                 
-  p1 <- cowplot::plot_grid(p_table, 
+  p1 <- cowplot::plot_grid(p_table, labels = 'a')
+  p2 <- cowplot::plot_grid(p_greedy_iterations,
                            p_on_off_bar,
-                           labels = 'auto', rel_widths = c(2, 1))
-  p2 <- cowplot::plot_grid(p_score_scatter,  
+                           labels = c('b', 'c'), nrow = 1)
+  p3 <- cowplot::plot_grid(p_score_scatter,  
                            p_offtarget_cov,
                            p_offtarget_dist,
                            p_target_cov,
-                           labels = c('c', 'd', 'e', 'f'), ncol = 1)
-  p3 <- cowplot::plot_grid(p_cons_cov,
-                           labels = 'g')
+                           labels = c('d', 'e', 'f', 'g'), ncol = 1)
+  p4 <- cowplot::plot_grid(p_cons_cov,
+                           labels = 'h')
                            
-  plots_combined <- cowplot::plot_grid(p1, p2, p3, ncol = 1, rel_heights = c(1, 4, 2))
+  plots_combined <- cowplot::plot_grid(p1, p2, p3, p4, ncol = 1, rel_heights = c(1, 1, 4, 2))
   guideSet@plots$combinations <- plots
   guideSet@plots$combinations$figure <- plots_combined
   

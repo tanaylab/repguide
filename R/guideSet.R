@@ -1,5 +1,7 @@
 .checkValidity <- function(object)
 {
+  if (length(subsetByOverlaps(object@whitelist, object@blacklist)) > 0) { stop ('Blacklisted and whitelisted intervals overlap') }
+   
   return(TRUE)
 } 
 
@@ -16,7 +18,8 @@ guideSet <-
                                  cis = 'GRanges',
                                  refdir = 'character',
                                  targets = 'GRanges',
-                                 blacklisted = 'GRanges',
+                                 blacklist = 'GRanges',
+                                 whitelist = 'GRanges',
                                  plots = 'list', 
                                  guide_length = 'numeric', 
                                  families = 'character',
@@ -34,16 +37,26 @@ guideSet <-
 setMethod(
   "initialize",
   signature = "guideSet",
-  function(.Object, 
+  function(
+           .Object, 
            genome,
            alt_chromosomes,
            tes,
            cis,
            refdir,
+           blacklist,
+           whitelist,
            n_cores,
            seed
            ) 
     {        
+      # Filter alternative chromosomes from BSgenome
+      if (!alt_chromosomes)
+      {
+        genome <- .keepBSgenomeSequences(genome, grep('_', seqnames(genome), value = TRUE, invert = TRUE))
+      }
+      
+      # Check Bowtie reference directory
       if (fs::is_dir(refdir))
       {
         message ('Searching for bowtie indeces in ', 'refdir')
@@ -53,27 +66,20 @@ setMethod(
         warning ('No bowtie index directory provided. Will search for indeces in ', refdir, ' and create them if not found')
       }
          
+      # Detect number of cores
       if (is.null(n_cores)) { n_cores <- parallel::detectCores() - 5 }
-      if (class(tes) != 'GRanges') { if (fs::is_file(tes)) { if (grepl('bed.gz$', tes) | grepl('.bed$', tes)) 
-      { 
-        tes <- rtracklayer::import.bed(tes) 
-      } else {
-        tes <- importTEs(tes) 
-      }}}
-
-      if (class(cis) != 'GRanges') { if (fs::is_file(cis)) { cis <- rtracklayer::import.bed(cis) }}
       
-      if (!alt_chromosomes)
-      {
-        genome <- .keepBSgenomeSequences(genome, grep('_', seqnames(genome), value = TRUE, invert = TRUE))
-      }
-      
-      # exclude chromosomes not represented in genome
-      seqlevels(tes, pruning.mode = 'coarse') <- seqlevels(genome)
+      # Import 
+      blacklist <- suppressWarnings(.importOrNot(blacklist, genome))
+      whitelist <- suppressWarnings(.importOrNot(whitelist, genome))
+      cis       <- suppressWarnings(.importOrNot(cis, genome))
+      tes       <- suppressWarnings(.importOrNot(tes, genome))
       
       .Object@genome <- genome
       .Object@tes <- tes
       .Object@cis <- cis
+      .Object@blacklist <- blacklist
+      .Object@whitelist <- whitelist
       .Object@plots <- list('targets' = list(), 'guides' = list(), 'combinations' = list())
       .Object@refdir <- refdir
       .Object@.n_cores <- n_cores  
@@ -84,6 +90,7 @@ setMethod(
         doMC::registerDoMC(n_cores) 
       } else {
         warning ('Package doMC not found. Install package to support multicore usage')
+        n_cores <- 1
       }
       
       timestamp(prefix = 'Created new guideSet at ', suffix = '', quiet = FALSE)
@@ -106,8 +113,15 @@ setMethod("show", "guideSet", function(object)
   message(glue::glue('with {n_guides} guides'))
   message(glue::glue('with {n_combinations} combinations'))
   message(glue::glue('with {n_plots} QC plots'))
-  message(glue::glue('with {n_cores} registered cores'))
+  message(glue::glue('registered {n_cores} cores'))
   message(glue::glue('matching bowtie index found: {found_index}'))
+})
+
+#' @export
+setGeneric("mappings", function(object) standardGeneric("mappings"))
+setMethod("mappings", signature("guideSet"), function(object) {
+  out <- object@kmers
+  return(out)
 })
 
 #' Exports results of guideSet
@@ -126,11 +140,13 @@ setGeneric('export', function(guideSet, ...) standardGeneric('export'), signatur
 #' @export
 createGuideSet <- function(genome, 
                            alt_chromosomes = FALSE,
-                           tes = GRanges(), 
-                           cis = GRanges(), 
+                           tes = NULL, 
+                           cis = NULL, 
+                           blacklist = NULL,
+                           whitelist = NULL,
                            n_cores = NULL, 
                            refdir = '', 
                            seed = 19)
 {
-  new('guideSet', genome, alt_chromosomes, tes, cis, refdir, n_cores, seed)
+  new('guideSet', genome, alt_chromosomes, tes, cis, refdir, blacklist, whitelist, n_cores, seed)
 }                         
