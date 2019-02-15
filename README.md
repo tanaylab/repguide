@@ -12,8 +12,9 @@ on the usage of the workflow is available in the package
 
 #### Functionality
 
+```{html}
 <img src="schematic.png" width="90%" />
-
+```
 
 ![Scheme](schematic.png)
 
