@@ -1,5 +1,7 @@
 ---
-output: rmarkdown::html_vignette
+output: 
+  md_document: 
+    variant: markdown_github
 ---
 
 ```{r, echo = FALSE}
