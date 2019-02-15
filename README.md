@@ -12,7 +12,7 @@ on the usage of the workflow is available in the package
 
 #### Functionality
 
-![very good|512x397,90%](schematic.png)
+![very good|512x397,75%](schematic.png)
 
 #### Installation
 
