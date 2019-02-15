@@ -50,6 +50,7 @@ setMethod(
            seed
            ) 
     {        
+      if (is.null(tes)) { stop ('Provide transposable element annotation of genome') }
       # Filter alternative chromosomes from BSgenome
       if (!alt_chromosomes)
       {

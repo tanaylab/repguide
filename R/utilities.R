@@ -186,6 +186,7 @@ clustGuides <- function(guideSet,
 {
   if(n_clust > 20) { stop('Maximal 20 clusters currently supported') }
   message('Clustering kmers')
+  set.seed(guideSet@.seed)
   kmers <- as_tibble(guideSet@kmers) %>% select(-matches('kmer_clust|te_clust'))
   kmers_filt <- 
     kmers %>%
@@ -207,15 +208,26 @@ clustGuides <- function(guideSet,
     # select(kmer_id, te_id, on_target) %>%
     # tidyToSparse()  
 
-  print(paste0('Clustering ', nrow(mat_full), ' kmers into ', n_clust, ' groups'))
+  print(paste0('Clustering ', nrow(mat), ' kmers into ', n_clust, ' groups'))
   kmer_cors <- as.matrix(qlcMatrix::cosSparse(t(mat_full)))
-  #kmer_cors <- tgs_cor(as.matrix(t(mat_full)), spearman = TRUE)
+  #kmer_cors <- tgs_cor(as.matrix(t(mat)), spearman = TRUE)
   kmer_clusts <- tibble(kmer_id = as.numeric(rownames(mat_full)),
                         kmer_clust = as.numeric(cutree(fastcluster::hclust(tgstat::tgs_dist(kmer_cors), 'ward.D2'), n_clust)))
                           
-  print(paste0('Clustering ', ncol(mat_full), ' loci into ', n_clust, ' groups'))
-  loci_cors <- as.matrix(qlcMatrix::cosSparse(mat_full))
-  loci_clusts <- tibble(te_id = as.numeric(colnames(mat_full)),
+  
+  if (ncol(mat_full) > 2e4) 
+  {
+    message ('Downsampling the matrix')
+    #vars <- matrixStats::colVars(mat_full)
+    vars <- apply(mat_full, 2, var)
+    mat <- mat_full[, tail(order(vars), 2e4)]
+  } else {
+    mat <- mat_full
+  }
+  
+  print(paste0('Clustering ', ncol(mat), ' loci into ', n_clust, ' groups'))
+  loci_cors <- as.matrix(qlcMatrix::cosSparse(mat))
+  loci_clusts <- tibble(te_id = as.numeric(colnames(mat)),
                         te_clust = as.numeric(cutree(fastcluster::hclust(tgstat::tgs_dist(loci_cors), 'ward.D2'), n_clust)))   
 
   kmers <- left_join(kmers, kmer_clusts, by = 'kmer_id') %>% left_join(., loci_clusts, by = 'te_id')                        
@@ -251,7 +263,7 @@ clustGuides <- function(guideSet,
     as_tibble %>%
     pull(V1)
     
-  guides(guideSet) <- GRanges(seqnames = 1:length(kmers_filt), ranges = 1:length(kmers_filt), seq_guide = kmers_filt)
+  guideSet@kmers <- GRanges(seqnames = 1:length(kmers_filt), ranges = 1:length(kmers_filt), seq_guide = kmers_filt)
   return(guideSet)
 }   
 

@@ -1,8 +1,3 @@
-#' Imports USCS repeatmasker file
-#'
-#'
-#'
-#' @export
 importTEs <- function(filepath = 'path to UCSC RMSK file')
 {
   if (!is.null(filepath))

@@ -1,0 +1,123 @@
+---
+title: "Benchmarking"
+author: "David Brocks"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Repguide}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+## Introduction
+In this benchmark, we will use Repguide to predict genomic binding sites for a publically available set of 12 guideRNAs targeting LTR5_Hs long terminal repeats and compare the results to experimentally determined Cas9 ChIP-seq peak intensities [1].
+
+## Running Repguide
+
+We first create a hg38 guideSet and provide the guide sequences to map.
+```{r, warning = FALSE, message = FALSE}
+library(Repguide)
+library(BSgenome.Hsapiens.UCSC.hg38)
+library(tidyverse)
+
+# Path to RepeatMasker hg38 repeat annotation (provided, LTRs only)
+repeats_path <- system.file(package = 'Repguide', 'extdata', 'hg38_ucsc_rmsk_ltr.txt.gz')
+
+gs <- createGuideSet(genome = Hsapiens, # Hsapiens is the short version of BSgenome.Hsapiens.UCSC.hg38
+                     tes = repeats_path) # can be either path to file or GRanges object)
+                     
+gs <- addTargets(gs, 'LTR5_Hs')
+
+# Import guideRNA sequences used in Fuentes et al. [1] against LTR5_Hs
+guides_path <- system.file(package = 'Repguide', 'extdata', 'fuentes_elife_2018_guides.fasta')
+guides_fuentes <- as.character(Biostrings::readDNAStringSet(guides_path))
+
+gs_fuentes <- addGuides(gs, 
+                guides = guides_fuentes, 
+                n_mismatches = 3, 
+                min_Son = 0, 
+                max_Soff = Inf, 
+                gc_content = c(0,1),
+                PAM = 'NGG')                     
+```
+
+## Compare predicted and experimental binding sites
+
+We can extract predicted binding sites using the `mappings` accessor and import provided dCAS9 ChIP peak coordinates from Fuentes et al. [1]. To facilitate comparison, we restrict our analysis to peaks on the main chromosome assemblies.
+```{r}
+# Extract predicted binding sites
+pred_sites <- mappings(gs_fuentes)     
+
+# Import experimental binding sites            
+peaks_path <- system.file(package = 'Repguide', 'extdata', 'fuentes_elife_2018_dCas9_peaks.bed')
+exp_sites  <- rtracklayer::import.bed(peaks_path)
+
+# Throw chromosomes not present in guideSet
+seqlevels(exp_sites, pruning.mode = 'coarse') <- seqlevels(pred_sites) 
+```
+
+We then compare the absolute number and binding intensities of correctly predicted binding sites.
+```{r}
+hits <- IRanges::findOverlaps(exp_sites, pred_sites)
+
+# Add logical whether or not peak was predicted by Repguide
+exp_sites$predicted <- 1:length(exp_sites) %in% hits@from
+
+# Add Repguide predicted binding score to ChIP peaks
+exp_sites$score_pred = 0
+exp_sites[unique(hits@from)]$score_pred <- 
+  as.data.frame(hits) %>% 
+  mutate(score_pred = pred_sites[hits@to]$Sbind) %>% 
+  group_by(queryHits) %>% 
+    summarise(score_pred = sum(score_pred)) %>% 
+  pull(score_pred)
+```
+
+## Plotting the results 
+
+We finally percent rank transform the predicted and experimental scores and visualize the results using `ggplot2`.
+```{r, fig.width = 7, fig.height = 3.5, fig.align='center'}
+ggdata <- 
+  exp_sites %>% 
+  as.data.frame %>% 
+  mutate(score_pred = percent_rank(score_pred), 
+         score      = percent_rank(score)) 
+
+# Create plots         
+p_predicted_peaks  <- 
+  ggdata %>% 
+  ggplot(aes(predicted)) + 
+    geom_bar() + 
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+p_predicted_score <-              
+  ggdata %>% 
+  ggplot(aes(x = predicted, y = score, group = predicted)) + 
+    geom_boxplot(outlier.shape = NA) + 
+    geom_jitter(size = 1, alpha = 0.1) + 
+    theme(axis.text.x = element_text(angle = 90))
+p_score_comparison <- 
+  ggdata %>% 
+  filter(predicted) %>% 
+  ggplot(aes(score, score_pred)) + 
+  geom_point(size = 1)
+
+# Combine plots 
+cowplot::plot_grid(p_predicted_peaks, 
+                   p_predicted_score,
+                   p_score_comparison, rel_widths = c(1, 1, 2), labels = 'auto', nrow = 1)
+```
+
+We can see that Repguide correctly predicted the vast majority of Cas9 peaks (__a__) and failed predictions generally showed weak ChIP enrichment (__b__). Moreover, computed binding scores were largely consistent with ChIP signal intensities (__c__), suggesting Repguide on and off-targetd scores can be interpreted quantitatively.
+
+
+## References
+[1] Daniel R Fuentes, Tomek Swigut, Joanna Wysocka. Systematic perturbation of retroviral LTRs reveals widespread long-range effects on human gene regulation. eLife (2018).
+
+## Session information
+```{r}
+sessionInfo()
+```          

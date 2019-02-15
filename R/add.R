@@ -141,8 +141,8 @@ addGuides <- function(guideSet,
                       n_mismatches = 0, 
                       guide_length = 19, 
                       gc_content = c(0.4, 0.8),
-                      min_Son = 10,
-                      max_Soff = 50,
+                      min_Son = NULL,
+                      max_Soff = NULL,
                       consensus_range = NULL,
                       n_clust = 11,
                       method = 'max',
@@ -180,6 +180,22 @@ addGuides <- function(guideSet,
   }
   guideSet <- .bowtie(guideSet, n_mismatches)
   guideSet <- annoGuides(guideSet)
+  
+  # Compute Son Soff scores if not given  
+  if (sum(is.null(min_Son), is.null(max_Soff)) > 0)
+  {
+    message ('Computing score blacklisting threshold')
+    kmer_stats <- guideSet@kmers %>% as_tibble %>% .kmerStats
+  }
+  if (is.null(min_Son))
+  {
+    min_Son <- quantile(kmer_stats$Son_tot, 0.95)
+  }
+  if (is.null(max_Soff)) 
+  {
+    max_Soff <- quantile(kmer_stats$Soff_tot, 0.99)
+  }
+    
   guideSet <- selGuides(guideSet, min_Son = min_Son, max_Soff = max_Soff, consensus_range = consensus_range, gc_content = gc_content)
   if (is.null(guides) | length(guides) > 20) 
   { 
