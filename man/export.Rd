@@ -2,13 +2,30 @@
 % Please edit documentation in R/guideSet.R
 \name{export}
 \alias{export}
-\title{Exports results of guideSet}
+\title{Exports results from guideSet}
 \usage{
 export(guideSet, ...)
 }
 \arguments{
-\item{outdir}{String. Path to output directory}
+\item{guideSet}{guideSet containing the results}
+
+\item{outdir}{String. Creates a new directory with timestamp prefix in \code{outdir} and exports results. If \code{NULL} and \code{force = TRUE}, the folder is created in the current working directory.}
+
+\item{force}{Logical. If \code{TRUE} and \code{outdir = NULL}, writes output to new folder in current working directory.}
+
+\item{workspace}{Logical. If \code{FALSE} (the default), suppresses additional export of \code{guideSet} as .RData file.}
+
+\item{dpi}{Integer. Resolution of exported images.}
 }
 \description{
-Exports results of guideSet
+Exports results from guideSet
+}
+\examples{
+\dontrun{
+gs <- createGuideSet(Hsapiens, tes = te_annotation_df)
+gs <- addTargets(gs, targets = 'LTR13')
+gs <- addGuides(gs, guide_length = 16, n_mismatches = 0, gc_content = c(0.25, 0.9), n_clust = 12)
+gs <- plotGuides(gs)
+export(gs, outdir = NULL, force = TRUE) # Creates new folder in current working directory and exports results  
+}
 }

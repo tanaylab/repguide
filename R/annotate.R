@@ -1,7 +1,9 @@
-annoGuides <- function(guideSet)
+.annoGuides <- function(guideSet, blacklist_penalty)
 {
   guide_length <- guideSet@guide_length
   genomic_bins <- binGenome(guideSet@genome, bin_width = 500)
+  blacklisted <- guideSet@blacklist
+  whitelisted <- guideSet@whitelist
   kmers <- guideSet@kmers 
   anno_te <- guideSet@tes
   targets <- guideSet@targets
@@ -10,12 +12,7 @@ annoGuides <- function(guideSet)
   if (!is.null(guideSet@kmers$te_id)) # unique in case of repeated calling of annoGuides (kmers_exp may duplicate rows)
   {
     print('Overwriting existing annotation')
-    kmers <-
-      kmers %>% 
-      as_tibble %>%
-      select(-cis_dist, -gc, -Sbind, -Scis, -Soff, -Son, -te_id, -unique_id, -genomic_bin, -repname, -con_pos, -on_target) %>%
-      distinct %>%
-      makeGRangesFromDataFrame(., keep.extra.columns = TRUE)
+    mcols(kmers) <- mcols(kmers)[, c('kmer_id', 'seq', 'n_mappings', 'mismatches', 'n_mismatches', 'guide_seq')] 
   } else { print('Annotating guides') }
   
   # remove duplicated binding sites
@@ -25,6 +22,10 @@ annoGuides <- function(guideSet)
   
   # Add genomic bin ID
   kmers_unique$genomic_bin <- findOverlaps(kmers_unique, genomic_bins, minoverlap = floor(guide_length/2), select = 'first')
+  
+  # Add black/whitelisted
+  kmers_unique$blacklisted <- 1:length(kmers_unique) %in% findOverlaps(kmers_unique, blacklisted)@from
+  kmers_unique$whitelisted <- 1:length(kmers_unique) %in% findOverlaps(kmers_unique, whitelisted)@from
   
   # Add distance to nearest cis
   kmers_unique$cis_dist <- NA
@@ -39,10 +40,10 @@ annoGuides <- function(guideSet)
   kmers_unique    <- full_join(as_tibble(kmers_unique), hits_te, by = 'queryHits') %>% 
                      select(-queryHits) %>%
                      mutate(unique_id = ifelse(is.na(te_id), genomic_bin, te_id),
-                            on_target = as.numeric(repname %in% guideSet@families),
+                            on_target = as.numeric(te_id %in% guideSet@targets$te_id),
                             on_target = ifelse(on_target <= 0, -1, on_target))
   
-  # Add anno to full kmer data.frame
+  # Add anno to full kmer data.frame (could be improved data.table)
   kmers <- full_join(as_tibble(kmers), 
                       kmers_unique, by = c('seqnames', 'start', 'end', 'strand', 'width'))
   
@@ -62,7 +63,7 @@ annoGuides <- function(guideSet)
   }
 
   # Compute guide scores
-  guideSet <- .compGuideScores(guideSet)
+  guideSet <- .compGuideScores(guideSet, blacklist_penalty)
   
   return(guideSet)
 }
@@ -96,13 +97,13 @@ annoGuides <- function(guideSet)
       distinct
     
   kmers_cons_df <- 
-    left_join(kmers_slim, cons_df) %>% 
+    left_join(kmers_slim, cons_df, by = 'repname') %>% 
     mutate(chunk = ntile(kmer_id, n_cores))
   
   kmers_anno <- plyr::ddply(kmers_cons_df, .variable = 'chunk', .fun = foo, .parallel = TRUE) %>% 
     as_tibble %>%
     select(kmer_id, strand, repname, con_pos) %>%
-    right_join(., kmers_full)
+    right_join(., kmers_full, by = c('kmer_id', 'strand', 'repname'))
     
   guideSet@kmers$con_pos <- kmers_anno$con_pos
   

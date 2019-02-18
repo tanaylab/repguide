@@ -7,22 +7,35 @@
 addTargets(guideSet, targets = NULL, force = FALSE)
 }
 \arguments{
-\item{guideSet}{guideSet object containing genome annotation.}
+\item{targets}{Character vector of family identifiers or GRanges object with coordinates and 'repname' metacolumn.}
 
-\item{targets}{Character vector or GRanges object. Either identifier of repeat families or GRanges object with target coordinates.}
+\item{force}{Logical. If \code{TRUE}, overwrites existing results.}
 
-\item{blacklist}{Boolean. Should targets overlapping cis regulatory regions be blacklisted. False by default.}
-
-\item{blacklist_dist}{Integer >= 0. Minimum basepair distance of target loci to cis regulatory regions.}
-
-\item{force.}{If \code{TRUE}, overwrites existing results.}
+\item{guideSet.}{guideSet object containing genome annotation.}
 }
 \value{
-Returns a guideSet object containing targets
+Returns a guideSet object containing targets.
 }
 \description{
 Add targets to a guideSet object.
 }
 \examples{
-guideSet <- addTargets(guideSet, targets = c('LTR12C', 'LTR12E'))
+\dontrun{
+gs <- createGuideSet(Hsapiens, tes = te_anno)
+
+# Use family identifiers as targets
+gs <- addTargets(guideSet, targets = c('LTR12C', 'LTR12E'))
+
+# Use custom regions as targets
+target_coords <- GenomicRanges::makeGRangesFromDataFrame(data.frame('chrom'   = c('chr1', 'chr4'), 
+                                                                    'start'   = c(1000, 10020),
+                                                                    'end'     = c(1122, 10090),
+                                                                    'strand'  = c('+', '-'),
+                                                                    'repname' = c('ImaginativeTE', 'ImaginativeTE')),
+                                                         , keep.extra.columns = TRUE)
+gs <- addTargets(guideSet, targets = target_coords)
+}
+}
+\seealso{
+\code{\link[=plotTargets]{plotTargets()}}, and \code{\link[GenomicRanges:makeGRangesFromDataFrame]{GenomicRanges::makeGRangesFromDataFrame()}}
 }

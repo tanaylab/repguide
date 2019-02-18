@@ -1,4 +1,81 @@
-.compGuideScores <- function(guideSet) # Sbind can be interprated as the likelyhood of binding to a site (0 - 1)
+#' Cluster guideRNAs
+#'
+#' Clusters guides based on their target binding profile
+#'
+#' @param guideSet guideSet containing guide mappings
+#' @param min_Son Numeric from 0 through 1. Only considers genomic target binding sites above \code{min_Son} score.
+#' @param n_clust Integer from 1 to 20. Number of clusters to group guides into. Passed to \code{cutree()} function.
+#' @return guideSet object with clustered guides.
+#' @examples
+#' \dontrun{
+#' gs <- createGuideSet(Hsapiens, tes = te_annotation_df)
+#' gs <- addTargets(gs, targets = 'LTR13A')
+#' gs <- addGuides(gs, guide_length = 16)
+#' gs <- compClusts(gs, min_Son = 0.25, n_clust = 10)
+#' gs <- plotGuides(gs)
+#' }
+#' @seealso [addGuides()], and [plotGuides()]
+#' @export
+clustGuides <- function(guideSet, 
+                        min_Son = 0,
+                        n_clust = 15)
+{
+  if(n_clust > 20) { stop('Maximal 20 clusters currently supported') }
+  message('Clustering kmers')
+  set.seed(guideSet@.seed)
+  kmers <- as_tibble(guideSet@kmers) %>% select(-matches('kmer_clust|te_clust'))
+  kmers_filt <- 
+    kmers %>%
+    filter(Son > min_Son & on_target == 1) %>%
+    filter(valid)
+    
+  if (nrow(kmers_filt) == 0) { stop ('No valid guides found, try relaxing selection parameters of addGuides function') }
+  if (length(unique(kmers_filt$kmer_id)) < n_clust) { stop ('Less valid guides than number of clusters') }
+  
+  mat_full <- 
+    kmers_filt %>%
+    select(kmer_id, te_id, Son) %>%
+    .tidyToSparse()
+    
+  #mat_full = log2(mat_full+1)
+   
+  # mat_slim <- kmers %>%
+    # filter(on_target >= 0) %>%
+    # mutate(on_target = on_target * Sbind) %>%
+    # select(kmer_id, te_id, on_target) %>%
+    # tidyToSparse()  
+
+  print(paste0('Clustering ', nrow(mat_full), ' kmers into ', n_clust, ' groups'))
+  kmer_cors <- as.matrix(qlcMatrix::cosSparse(t(mat_full)))
+  #kmer_cors <- tgs_cor(as.matrix(t(mat_full)), spearman = TRUE)
+  kmer_clusts <- tibble(kmer_id = as.numeric(rownames(mat_full)),
+                        kmer_clust = as.numeric(cutree(fastcluster::hclust(tgstat::tgs_dist(kmer_cors), 'ward.D2'), n_clust)))
+                          
+  
+  if (ncol(mat_full) > 2e4) 
+  {
+    message ('Downsampling the matrix')
+    #vars <- matrixStats::colVars(mat_full)
+    vars <- apply(mat_full, 2, var)
+    mat_full <- mat_full[, tail(order(vars), 2e4)]
+  } else {
+    mat_full <- mat_full
+  }
+  
+  print(paste0('Clustering ', ncol(mat_full), ' loci into ', n_clust, ' groups'))
+  loci_cors <- as.matrix(qlcMatrix::cosSparse(mat_full))
+  loci_clusts <- tibble(te_id = as.numeric(colnames(mat_full)),
+                        te_clust = as.numeric(cutree(fastcluster::hclust(tgstat::tgs_dist(loci_cors), 'ward.D2'), n_clust)))   
+
+  kmers <- left_join(kmers, kmer_clusts, by = 'kmer_id') %>% left_join(., loci_clusts, by = 'te_id')                        
+  guideSet@kmers$kmer_clust <- kmers$kmer_clust
+  guideSet@kmers$te_clust <- kmers$te_clust
+  
+  return(guideSet)
+}
+
+.compGuideScores <- function(guideSet,
+                             blacklist_penalty = 10) # Sbind can be interprated as the likelyhood of binding to a site (0 - 1)
 {
   print('Computing guide scores')
   kmers <- as_tibble(guideSet@kmers) %>% select(-matches('Sbind'))
@@ -24,8 +101,8 @@
     
     # add mismatch score (Sbind), could be improved with data.table
     kmers <- 
-      left_join(kmers, 
-                mismatch_universe_scored) %>%
+      suppressMessages(left_join(kmers, 
+                mismatch_universe_scored)) %>%
       mutate(Sbind = ifelse(n_mismatches == 0, 1, Sbind))
   } else {
     kmers$Sbind <- 1
@@ -48,7 +125,12 @@
   
   # Compute Soff
   kmers$Soff <- kmers$Sbind * kmers$Scis
-  kmers <- kmers %>% mutate(Soff = ifelse(on_target >= 0, 0, Soff))
+  kmers <- 
+    kmers %>% 
+    mutate(Soff = ifelse(on_target >= 0, 0, Soff),
+                         Soff = ifelse(blacklisted, Soff * blacklist_penalty, Soff),
+                         Soff = ifelse(is.na(Soff), 0, Soff), # if Soff(0) x blacklist_penalty(Inf) = NaN
+                         Soff = ifelse(whitelisted, 0, Soff))
   #kmers$Soff <- round(kmers$Soff, 2)
   
   # Compute Son
@@ -171,7 +253,7 @@
                                                off_tot = length(unique_id[Soff > 0])),
                                                by = 'combi_id'] %>%
       as_tibble %>%
-      left_join(combinatorics_df) %>%
+      left_join(., combinatorics_df, by = 'combi_id') %>%
       arrange(n_guides) %>%
       nest(kmer_id, .key = 'kmer_id') %>%
       mutate(enr = ifelse(Soff_tot == 0, (Son_tot) / (Soff_tot + 0.01), Son_tot / Soff_tot)) # adding a pseudo-count to avoid Inf)
@@ -208,22 +290,6 @@
     kmers_final <- unlist(kmers_best)
   }
   return(guideSet)
-}
-
-                         
-
-
-compStats <- function(kmers)
-{
-  stats <-
-    kmers %>% 
-      filter(selected) %>% 
-      summarise(total_hits = sum(on_target), 
-                unique_hits = sum(on_target[!duplicated(te_id)]), 
-                total_off = sum(!on_target), 
-                total_blacklisted = sum(blacklisted))
-                
-  print(stats)
 }
 
 # Check multi processor performance

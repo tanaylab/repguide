@@ -4,7 +4,47 @@
 \name{guideSet-class}
 \alias{guideSet-class}
 \alias{guideSet}
-\title{An S4 class to store all results}
+\title{An S4 class to store results of Repguide functions.}
 \description{
-An S4 class to store all results
+An S4 class to store results of Repguide functions.
 }
+\section{Slots}{
+
+\describe{
+\item{\code{genome}}{BSgenome object.}
+
+\item{\code{tes}}{GRanges object}
+
+\item{\code{cis}}{GRanges object}
+
+\item{\code{refdir}}{GRanges object}
+
+\item{\code{targets}}{GRanges object}
+
+\item{\code{blacklist}}{GRanges object}
+
+\item{\code{whitelist}}{GRanges object}
+
+\item{\code{plots}}{List}
+
+\item{\code{guide_length}}{Integer}
+
+\item{\code{families}}{Character}
+
+\item{\code{PAM}}{Character}
+
+\item{\code{kmers}}{GRanges}
+
+\item{\code{alignments}}{DNAStringSetList}
+
+\item{\code{consensus}}{DNAStringSet}
+
+\item{\code{combinations}}{Data.frame}
+
+\item{\code{calls}}{List}
+
+\item{\code{.n_cores}}{Integer}
+
+\item{\code{.seed}}{Integer}
+}}
+

@@ -6,6 +6,31 @@
 \usage{
 plotTargets(guideSet)
 }
+\arguments{
+\item{guideSet}{guideSet containing combinations.}
+}
+\value{
+list of ggplot objects.
+}
 \description{
-Generates targets QC plots
+Computes multiple QC plots and arranges into a figure with subpanels:
+\describe{
+\item{(a)}{ Genomic copy-number vs average size (in kbs) of selected (red) vs all other families in guideSet. }
+\item{b}{ Genomic copy-number of selected families on autosomes and sex chromosomes (other refers to alternative chromosome assemblies). }
+\item{c}{ Size distribution of selected families. }
+\item{d}{ Multiple sequence alignment of selected families. Rows represent individual loci and columns position on the alignment. }
+\item{e}{ CpG density along the consensus model. Positions are identical to (d). }
+\item{f}{ Position on the consensus model (as in e) of putative cis regulatory features. }
+}
+}
+\examples{
+\dontrun{
+gs <- createGuideSet(Hsapiens, tes = te_annotation_df)
+gs <- addTargets(gs, targets = 'LTR13A')
+gs <- addGuides(gs, guide_length = 16)
+gs <- plotGuides(gs)  
+}
+}
+\seealso{
+\code{\link[=addTargets]{addTargets()}}, and \code{\link[=export]{export()}}
 }

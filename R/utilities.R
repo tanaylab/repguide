@@ -137,7 +137,7 @@ msaToLong <- function(msa)
     mutate(CpG = lag(base == 'C', n = 1) & base == 'G', 
            CpG = ifelse(lead(base == 'G', n = 1) & base == 'C', TRUE, CpG)) %>%
     select(te_id, pos, CpG) %>%
-    left_join(msa_long, .) %>%
+    left_join(msa_long, ., by = c('te_id', 'pos')) %>%
     replace_na(list(CpG = FALSE)) %>%
     mutate(CpG = ifelse(base == '-', NA, CpG))
   
@@ -152,89 +152,16 @@ binGenome <- function(genome, bin_width = 250)
   return(genomic_bins)
 }
 
-#' List transposable element families.
-#'
-#' Retrieves all available families in the provided guideSet that match defined characteristics.
-#'
-#' @param guideSet guideSet object to query.
-#' @param class Character. Only show families belonging to \code{class}.
-#' @param low_complexity Logical. Should low complexity families be returned.
-#' @return Character vector.
-#' @export
-listFamilies <- function(guideSet, 
-                         repclass = NULL, 
-                         low_complexity = FALSE)
+.getTSS <- function(genes)
 {
-  tes <- as_tibble(guideSet@tes) %>% select(repname, repclass) %>% distinct
-  if (!is.null(repclass)) 
-  {
-    tes <- filter(tes, repclass %in% repclass)
-  }
-  
-  if (!low_complexity)
-  {
-    tes <- filter(tes, repclass != 'Simple_repeat')
-  }
-  
-  res <- tes %>%  pull(repname) %>% sort
-  return(res)
-}
-
-clustGuides <- function(guideSet, 
-                        min_Son = 0,
-                        n_clust = 15)
-{
-  if(n_clust > 20) { stop('Maximal 20 clusters currently supported') }
-  message('Clustering kmers')
-  set.seed(guideSet@.seed)
-  kmers <- as_tibble(guideSet@kmers) %>% select(-matches('kmer_clust|te_clust'))
-  kmers_filt <- 
-    kmers %>%
-    filter(Son > min_Son & on_target == 1) %>%
-    filter(valid)
-    
-  if (nrow(kmers_filt) == 0) { stop ('No valid guides found, try relaxing selection parameters of addGuides function') }
-    
-  mat_full <- 
-    kmers_filt %>%
-    select(kmer_id, te_id, Son) %>%
-    .tidyToSparse()
-    
-  #mat_full = log2(mat_full+1)
-   
-  # mat_slim <- kmers %>%
-    # filter(on_target >= 0) %>%
-    # mutate(on_target = on_target * Sbind) %>%
-    # select(kmer_id, te_id, on_target) %>%
-    # tidyToSparse()  
-
-  print(paste0('Clustering ', nrow(mat), ' kmers into ', n_clust, ' groups'))
-  kmer_cors <- as.matrix(qlcMatrix::cosSparse(t(mat_full)))
-  #kmer_cors <- tgs_cor(as.matrix(t(mat)), spearman = TRUE)
-  kmer_clusts <- tibble(kmer_id = as.numeric(rownames(mat_full)),
-                        kmer_clust = as.numeric(cutree(fastcluster::hclust(tgstat::tgs_dist(kmer_cors), 'ward.D2'), n_clust)))
-                          
-  
-  if (ncol(mat_full) > 2e4) 
-  {
-    message ('Downsampling the matrix')
-    #vars <- matrixStats::colVars(mat_full)
-    vars <- apply(mat_full, 2, var)
-    mat <- mat_full[, tail(order(vars), 2e4)]
-  } else {
-    mat <- mat_full
-  }
-  
-  print(paste0('Clustering ', ncol(mat), ' loci into ', n_clust, ' groups'))
-  loci_cors <- as.matrix(qlcMatrix::cosSparse(mat))
-  loci_clusts <- tibble(te_id = as.numeric(colnames(mat)),
-                        te_clust = as.numeric(cutree(fastcluster::hclust(tgstat::tgs_dist(loci_cors), 'ward.D2'), n_clust)))   
-
-  kmers <- left_join(kmers, kmer_clusts, by = 'kmer_id') %>% left_join(., loci_clusts, by = 'te_id')                        
-  guideSet@kmers$kmer_clust <- kmers$kmer_clust
-  guideSet@kmers$te_clust <- kmers$te_clust
-  
-  return(guideSet)
+	transcripts = genes[genes$type == 'transcript']
+	end(transcripts[strand(transcripts) == '+']) = start(transcripts[strand(transcripts) == '+'])
+	#start(transcripts[strand(transcripts) == '+']) = start(transcripts[strand(transcripts) == '+']) - extend
+	
+	start(transcripts[strand(transcripts) == '-']) = end(transcripts[strand(transcripts) == '-'])
+	#end(transcripts[strand(transcripts) == '-']) = end(transcripts[strand(transcripts) == '-']) + extend
+	tss = unique(transcripts)
+	return(tss)
 }
 
 .jellyfish <- function(guideSet, lower_count = 2)

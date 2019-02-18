@@ -175,6 +175,11 @@ plotMSA <- function(guideSet,
         pull(te_id)  
         
       kmers <- kmers %>% filter(te_id %in% loci_subset & kmer_id %in% kmers_subset)
+      xaxis_lab <-'Sampled '
+      yaxis_lab <-'Sampled '
+    } else {
+      xaxis_lab <-''
+      yaxis_lab <-''
     }
     
     kmers_dt <- as.data.table(kmers, sorted = FALSE)
@@ -201,8 +206,8 @@ plotMSA <- function(guideSet,
       mutate(Slocus = cut(Son, breaks = c(0, 0.25, 0.5, 1), include.lowest = TRUE))
       
     # Plotting
-    row_clust_lines <- c(0, ggdata %>% count(kmer_id, kmer_clust) %>% count(kmer_clust) %>% pull(nn) %>% cumsum)
-    col_clust_lines <- c(0, ggdata %>% count(te_id, te_clust) %>% count(te_clust) %>% pull(nn) %>% cumsum)
+    row_clust_lines <- c(0, ggdata %>% count(kmer_id, kmer_clust) %>% count(kmer_clust) %>% pull(n) %>% cumsum)
+    col_clust_lines <- c(0, ggdata %>% count(te_id, te_clust) %>% count(te_clust) %>% pull(n) %>% cumsum)
     
     n_kmers <- length(unique(ggdata$kmer_id))
     n_loci <- length(unique(ggdata$te_id))
@@ -217,8 +222,8 @@ plotMSA <- function(guideSet,
         #scale_fill_gradient2(low = 'blue', mid = 'lightgrey', high = 'red', midpoint = 0)
         annotate('segment', x = 0, xend = n_loci, y = row_clust_lines, yend = row_clust_lines, lwd = 0.1) +
         geom_vline(xintercept = col_clust_lines, lwd = 0.1) +
-        xlab(paste0('Sampled target loci (n = ', n_loci, ')')) +
-        ylab(paste0('Sampled guides (n = ', n_kmers, ')')) +
+        xlab(paste0(xaxis_lab, 'target loci (n = ', n_loci, ')')) +
+        ylab(paste0(yaxis_lab, 'guides (n = ', n_kmers, ')')) +
         coord_cartesian(xlim = c(0, n_loci + round(n_loci / 100)), clip="off") +
         annotate('segment', x = n_loci + round(n_loci / 100), xend = n_loci + 10, y = best_kmer_pos, yend = best_kmer_pos, 
                  lwd = 0.1, arrow = arrow(type = "open", length = unit(n_kmers/100000, "npc"))) +
@@ -294,8 +299,26 @@ plotMSA <- function(guideSet,
 }
 
 #' Generates targets QC plots
-#'
-#'
+#' 
+#' Computes multiple QC plots and arranges into a figure with subpanels:
+#' \describe{
+#'   \item{(a)}{ Genomic copy-number vs average size (in kbs) of selected (red) vs all other families in guideSet. }
+#'   \item{b}{ Genomic copy-number of selected families on autosomes and sex chromosomes (other refers to alternative chromosome assemblies). }
+#'   \item{c}{ Size distribution of selected families. }
+#'   \item{d}{ Multiple sequence alignment of selected families. Rows represent individual loci and columns position on the alignment. }
+#'   \item{e}{ CpG density along the consensus model. Positions are identical to (d). }
+#'   \item{f}{ Position on the consensus model (as in e) of putative cis regulatory features. }
+#' }
+#' @param guideSet guideSet containing combinations.
+#' @return list of ggplot objects.
+#' @examples
+#' \dontrun{
+#' gs <- createGuideSet(Hsapiens, tes = te_annotation_df)
+#' gs <- addTargets(gs, targets = 'LTR13A')
+#' gs <- addGuides(gs, guide_length = 16)
+#' gs <- plotGuides(gs)  
+#' }
+#' @seealso [addTargets()], and [export()]
 #' @export
 plotTargets <- function(guideSet)
 {
@@ -374,8 +397,27 @@ plotTargets <- function(guideSet)
 }
 
 #' Generates guides QC plots
-#'
-#'
+#' 
+#' Computes multiple QC plots and arranges into a figure with subpanels:
+#' \describe{
+#'   \item{a}{ Number of guides passing blacklisting steps. }
+#'   \item{b}{ Guide GC content distribution. Blacklisted guides are highlighted in red. }
+#'   \item{c}{ Total on- and off-target score per valid (turquoise) and blacklisted (red) guides. }
+#'   \item{d}{ Predicted binding score distribution per number of mismatch to genomic complement. }
+#'   \item{e}{ Distance to the nearest cis regulatory feature (defined by \code{cis} in the \code{createGuideSet} function) and conversion into Scis score (red dotted line) }
+#'   \item{f}{ On-target binding profile for valid guides (rows) along target loci (columns) (sampled for large matrices). Colors indicate predicted binding affinity. }
+#'   \item{g}{ Selection of guide representative (large dot) per cluster (colors). Black color represents group of blacklisted guides. }
+#' }
+#' @param guideSet guideSet containing combinations.
+#' @return list of ggplot objects.
+#' @examples
+#' \dontrun{
+#' gs <- createGuideSet(Hsapiens, tes = te_annotation_df)
+#' gs <- addTargets(gs, targets = 'LTR13A')
+#' gs <- addGuides(gs, guide_length = 16)
+#' gs <- plotGuides(gs)  
+#' }
+#' @seealso [addGuides()], and [export()]
 #' @export
 plotGuides <- function(guideSet)
 {
@@ -386,15 +428,14 @@ plotGuides <- function(guideSet)
   
   p_guide_filt_counts <-
     kmers %>% 
-    select(kmer_id, valid_gc, valid_score, valid_blacklist, valid) %>% 
+    select(kmer_id, valid_gc, valid_score, valid) %>% 
     distinct %>% 
     summarise(all = n(), 
               pass_gc = sum(valid_gc), 
-              pass_score = sum(valid_score), 
-              pass_blacklist = sum(valid_blacklist),
+              pass_score = sum(valid_score),
               pass_all = sum(valid)) %>% 
     gather() %>% 
-    mutate(key = factor(key, levels = c('all', 'pass_gc', 'pass_score', 'pass_blacklist', 'pass_all')[order(value, decreasing = TRUE)])) %>% 
+    mutate(key = factor(key, levels = c('all', 'pass_gc', 'pass_score', 'pass_all')[order(value, decreasing = TRUE)])) %>% 
     ggplot(aes(key, value)) + 
       geom_bar(stat = 'identity') +
       theme(axis.text.x = element_text(angle=90, hjust=1),
@@ -519,8 +560,27 @@ plotGuides <- function(guideSet)
 }
 
 #' Generates combinations QC plots
-#'
-#'
+#' 
+#' Computes multiple QC plots and arranges into a figure with subpanels:
+#' \describe{
+#'   \item{a}{ Table showing total on/off-target scores (Son_tot and Soff_tot) for the best combination per number of guides (columns). }
+#'   \item{b}{ Total on- and off-target score per number of greedy search iterations. Colors indicate the number of guides (from yellow (at least 2) to black (defined by \code{max_guides} in the \code{addCombinations} function). }
+#'   \item{c}{ Total on- and off-target score per number of guides. }
+#'   \item{d}{ Total on- and off-target score for all computated combinations per number of guides. }
+#'   \item{e}{ Off-target coverage for the best guide combination per number of guides and off-target type (e.g. transposon family). Colors indicate predicted binding affinity to the off-target. }
+#'   \item{f}{ Distance to the nearest cis regulatory feature (defined by \code{cis} in the \code{createGuideSet} function) for the best combination number of guides. }
+#'   \item{g}{ On-target coverage for the best guide combination per number of guides and on-target transposon family. Colors indicate predicted binding affinity to the target. }
+#'   \item{h}{ Coverage for the best guide combination on the consensus model of transposon families. Colors indicate the number of guides (from yellow (1) to black (\code{max_guides})) }
+#' }
+#' @param guideSet guideSet containing combinations.
+#' @return list of ggplot objects.
+#' @examples
+#' \dontrun{
+#' gs <- createGuideSet(Hsapiens, tes = te_annotation_df)
+#' gs <- addTargets(gs, targets = 'LTR13A')
+#' gs <- plotTargets(gs)
+#' }
+#' @seealso [addCombinations()], and [export()]
 #' @export
 plotCombinations <- function(guideSet)
 { 

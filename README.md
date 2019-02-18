@@ -1,5 +1,4 @@
-Repguide
-========
+# Repguide
 
 The Repguide R package is a pre-alpha development version to facilitate
 the design of guideRNAs for CRISPR/dCas9 targeting of repetitive DNA
@@ -12,7 +11,7 @@ on the usage of the workflow is available in the package
 
 #### Functionality
 
-<img src="schematic.png" width="90%" style="display: block; margin: auto;" />
+![](schematic.png)
 
 #### Installation
 

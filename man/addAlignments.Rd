@@ -8,21 +8,33 @@ addAlignments(guideSet, files = NULL, max_gap_freq = 0.8,
   iterations = 2, refinements = 1, force = FALSE)
 }
 \arguments{
-\item{guideSet}{guideSet containing targets}
+\item{files}{data.frame. Imports multiple sequence alignments from file for provided families. For other families, the alignment is computed. Requires columns 'repname' and 'path' storing family identifiers and paths to the multiple sequence alignment, respectively.}
 
-\item{files}{data.frame. Requires columns 'repname' and 'path' storing family identifiers and paths to the multiple sequence alignment, respectively.}
+\item{max_gap_freq}{Numeric between 0 and 1. Removes positions on alignment with higher gap (-) frequency than \code{max_gap_freq}.}
 
-\item{max_gap_freq}{Numeric. Removes positions on alignment with higher gap (-) frequency than \code{max_gap_freq}.}
+\item{iterations}{Integer. Passed to AlignSeqs from DECIPHER package.}
 
-\item{iterations}{Numeric. Passed to AlignSeqs from DECIPHER package.}
+\item{refinements}{Integer. Passed to AlignSeqs from DECIPHER package.}
 
-\item{refinements}{Numeric. Passed to AlignSeqs from DECIPHER package.}
+\item{force}{Logical. If \code{TRUE}, overwrites existing alignments.}
 
-\item{force}{Logical. If TRUE, overwrites existing alignments.}
+\item{guideSet.}{guideSet containing targets.}
 }
 \value{
-Returns a guideSet object with alignments.
+Returns a guideSet object with multiple sequence alignment and consensus model.
 }
 \description{
-Calculates rough multiple sequence alignment and consensus sequence or imports from external file
+Calculates rough multiple sequence alignment and consensus sequence or imports from external fasta file
+}
+\examples{
+\dontrun{
+gs <- createGuideSet(genome = Hsapiens, tes = te_annotation_df)
+gs <- addTargets(gs, targets = c('THE1B', 'THE1C'))
+# import multiple sequence alignment for THE1C and compute for THE1B
+gs <- addAlignments(gs, files = data.frame('repname' = 'THE1C', path = 'path to multiple sequence alignment fasta file'))
+gs@alignments
+}
+}
+\seealso{
+\code{\link[DECIPHER:AlignSeqs]{DECIPHER::AlignSeqs()}}
 }

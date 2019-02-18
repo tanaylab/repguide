@@ -22,7 +22,7 @@ In this tutorial, we are going to design guideRNAs against long terminal repeats
 ## Getting started
 
 ### Genome assembly
-Repguide requires the genome assembly of your organism of choice stored as a _BSgenome_ object. You can retrieve the full list of available _BSgenome_ objects by typing `BSgenome::available.genomes()` or create and install a custom _BSgenome_ object following the instructions of the _BSgenome_ vignette. 
+Repguide requires the genome assembly of your organism of choice stored as a _BSgenome_ object. You can retrieve the full list of supported genomes by typing `BSgenome::available.genomes()` or create a custom _BSgenome_ object following these [instructions](https://www.bioconductor.org/packages//2.7/bioc/vignettes/BSgenome/inst/doc/BSgenomeForge.pdf) 
 
 Since we are designing guideRNAs against LTRs of the human genome, we will first install the UCSC hg38 assembly.
 ```{r, eval = FALSE}
@@ -30,19 +30,14 @@ if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 BiocManager::install("BSgenome.Hsapiens.UCSC.hg38")
 ```
-
-To load Repguide and the human hg38 _BSgenome_ into your R environment type:
-```{r, warning = FALSE, message = FALSE}
-library(Repguide)
-library(BSgenome.Hsapiens.UCSC.hg38)
-```
+__Important__ __note__: Do not use repeat-masked BSgenome objects (contain 'masked' suffix)!
 
 ### Genome annotation
 In addition to the assembled genome sequence, Repguide requires genomic coordinates of transposable elements (mandatory) and cis regulatory features (optional). A convient solution is to download transposon coordinates using the [UCSC table browser](https://genome.ucsc.edu/cgi-bin/hgTables) by selecting your genome of choice, group = Repeats, track = RepeatMasker, and output format = all fields from selected table. You can provide other annotation as long as it provides the basic information about chromosome, start, end, strand, and a transposon identifier (e.g. repname). In this tutorial, we will show you how to import such information using the provided example datasets. 
 
 ### Bowtie aligner
 Repguide uses a R implementation of the short read aligner [Bowtie](http://bowtie-bio.sourceforge.net/index.shtml) to map potential guideRNAs against the genome. Bowtie requires a FM index based on the Burrows-Wheeler transform to do so. 
-In case Repguide does not find the corresponding bowtie index files to your chosen genome, it will automatically create them. Since this can be quite time consuming (few hours), you can [download](ftp://ftp.ccb.jhu.edu/pub/data/bowtie_indexes/) the appropriate index files (if available), rename them following the format (BSgenome + suffix, see below) and provide the directory in the `refdir` argument of the `createGuideSet` function.
+In case Repguide does not find the corresponding bowtie index files to your chosen genome, it will automatically create them. Since this can be quite time consuming (few hours), you can [download](ftp://ftp.ccb.jhu.edu/pub/data/bowtie_indexes/) the appropriate index files (if available), rename them following the format (BSgenome + suffix, see below) and provide the directory in the `refdir` argument of the `createGuideSet()` function.
 
 Example naming of the human hg38 bowtie indeces:  
 
@@ -54,32 +49,46 @@ Example naming of the human hg38 bowtie indeces:
  * BSgenome.Hsapiens.UCSC.hg38.rev.2.ebwt  
 
 ## Creating a guideSet
-We start the workflow by creating a _guideSet_ object, which is a S4 class to store genomic information and the results of later functions.
 
-To create a new _guideSet_ object, we have to define the genome assembly and provide annotation on transposable elements and cis regulatory features (e.g. promoters/enhancers) which is optional but highly recommended for optimal guideRNA design. In this tutorial, we will use the hg38 UCSC repeatmasker and FANTOM5 TSS annotation provided with the __Repguide__ package. You can provide the path to the corresponding bowtie index directory as the `refdir` parameter. `refdir = NULL` (the default) will search for bowtie indeces in the __Repguide__ installation directory and create the indeces if not found (takes a few hours).
+To load Repguide and the human hg38 _BSgenome_ into your R environment type:
+```{r, warning = FALSE, message = FALSE}
+library(Repguide)
+library(BSgenome.Hsapiens.UCSC.hg38)
+```
+ 
+We then start the workflow by creating a _guideSet_ object, which is a S4 class to store genomic information and the results of later functions.
+
+To create a new _guideSet_ object, we have to define the genome assembly and provide annotation on transposable elements and cis regulatory features (e.g. promoters/enhancers) which is optional but highly recommended for optimal guideRNA design. In this tutorial, we will use the hg38 UCSC repeatmasker and FANTOM5 TSS annotation and blacklist promoter regions of essential human genes (see `?essential_genes` for further information) all provided with the __Repguide__ package. We can also provide the path to the corresponding bowtie index directory in the `refdir` parameter. `refdir = NULL` (the default) will search for bowtie indeces in the __Repguide__ installation directory and create the indeces if not found (takes up to a few hours).
+
 ```{r, warning = FALSE}
 # Path to FANTOM5 hg38 TSS bed file (provided)
-tss_path <- system.file(package = 'Repguide', 'extdata', 'hg38_fair+new_CAGE_peaks_phase1and2.bed.gz')
+tss_path <- system.file(package = 'Repguide', 
+                        'extdata', 
+                        'hg38_fair+new_CAGE_peaks_phase1and2.bed.gz')
 # Path to RepeatMasker hg38 repeat annotation (provided, LTRs only)
-repeats_path <- system.file(package = 'Repguide', 'extdata', 'hg38_ucsc_rmsk_ltr.txt.gz')
+repeats_path <- system.file(package = 'Repguide', 
+                            'extdata', 
+                            'hg38_ucsc_rmsk_ltr.txt.gz')
 # Path to essential genes (provided)
-essentials_path <- NULL
+essentials_path <- system.file(package = 'Repguide', 
+                               'extdata', 
+                               'hg38_essential_gene_tss_coords.bed')
 
 gs <- createGuideSet(genome = Hsapiens,           # Hsapiens is the short version of BSgenome.Hsapiens.UCSC.hg38
-                     tes = repeats_path,          # can be either path to file or GRanges object)
-                     cis = tss_path,              # can be either path to file or GRanges object) 
-                     blacklist = essentials_path)  
+                     tes = repeats_path,          # can be either path to file or GRanges object
+                     cis = tss_path,              # can be either path to file or GRanges object 
+                     blacklist = essentials_path) # can be either path to file or GRanges object
 gs                     
 ```
 
 ## Adding target loci
 To add target sites to our previously created _guideSet_, we can either provide the names of the repeat families we wish to target or a GRanges object with coordinates of the transposable elements.
 
-To get the full list of available repeat families (including simple repeats) we can type `listFamilies(gs, low_complexity = TRUE)`.
+To get the full list of available repeat families we can type `repnames(gs)`.
 
-The LTRs originating from the human endogenous retrovirus 9 all conveniently share a common 'LTR12' prefix (Note: The _Dfam_ database allows open access to transposon genetic relationships, e.g. http://dfam.org/entry/DF0000399/relationships), allowing us to retrieve all its members by using a simple grep command:
+The LTRs originating from the human endogenous retrovirus 9 all conveniently share a common 'LTR12' prefix (Note: The _Dfam_ database allows open access to transposon genetic relationships, e.g. http://dfam.org/entry/DF0000399/relationships), allowing us to easily retrieve all its members:
 ```{r}
-families <- grep('LTR12', listFamilies(gs), value = TRUE)
+families <- repnames(gs, pattern = 'LTR12')
 families
 ```
 
@@ -101,9 +110,11 @@ msa_files <- dir(data_dir, full = TRUE, pattern = 'fasta.gz$')
 msa_df <- data.frame('repname' = c('LTR12B', 'LTR12D'), 'path' = msa_files)
 msa_df
 
-gs <- addAlignments(gs, # our guideSet
-                    files = msa_df, # our data.frame
-                    max_gap_freq = 0.8) # Removes columns with more than 80% gaps in the alignment
+gs <- addAlignments(gs,                 # our guideSet
+                    files = msa_df,     # our data.frame
+                    max_gap_freq = 0.8, # Removes columns with more than 80% gaps in the alignment
+                    iterations = 1,
+                    refinements = 0) 
 ```
 
 Having added the targets and alignments to our _guideSet_, we can now generate several QC reports and inspect the targeted families more closely:
@@ -121,12 +132,13 @@ For that purpose, we have to first create a simple data.frame providing coordina
 consensus_df <- data.frame('repname' = c('LTR12B', 'LTR12E'), 
                            'start' = c(1, 1), 
                            'end' = c(150, 500))
+consensus_df                           
 ```
 _Note_ _that_ _guide_ _target_ _binding_ _sites_ _outside_ _the_ _consensus_ _range_ _will_ _be_ _scored_ _neutrally_.  
 
 We then call the `addGuides()` function to compute our guide universe. More specifically, this function first calculates the entire 19mer (in our scenario) universe of specified targets, selects kmers with proper PAM sequence, and finds and annotates their putative genomic binding sites. Since most kmers are genetically similar and hence show redundanct binding profiles, Repguide finally clusters kmers into groups with homogenous binding profiles and marks the best kmer per cluster (the number of groups and selection procedure can be specified with the `n_clust` and `method` arguments of the `addGuides()` function). Depending on the target sequence complexity, guideRNA length, and allowed mismatches, the computation may take a while.
 
-```{r, warning = FALSE, message = FALSE}
+```{r, warning = FALSE, message = TRUE}
 gs <- addGuides(gs, # our guideSet
                 n_mismatches = 2, # higher number of mismatches significantly reduces efficiency
                 guide_length = 19, # length of the guideRNAs to design
@@ -138,11 +150,10 @@ We can now generate a QC report and sanity check the results by entering:
 ```{r, fig.width = 7, fig.height=12, fig.align='center', warning = FALSE, message = FALSE}
 gs <- plotGuides(gs)
 ```
-?? Add plot about kmer universe complexity, i.e. distribution of hamming distances?
 
 We can see from the report that while most of the ~30,000 potential guides have the desired GC content, only a minority passes our minimal score requirements (__a__ - __c__). Panel __d__ shows the Sbind score distribution by the total number of mismatches of a guide's genomic complement and __e__ summarizes the frequency of off-targets by their basepair distance to the nearest cis regulatory element. The dotted red line indicates the conversion of basepair distances to the corresponding cis score (Scis) of a binding site. Panels __f__ and __g__ show the clustering of guideRNAs by their target binding profile and selection of the best guide per cluster, respectively. For full annotation of the panels, we refer to the documentation page of the `plotGuides` function.
 
-To adjust the guide selection or clustering steps, you can use the `selGuides` or `clustGuides` functions, respectively.
+To adjust the guide selection or clustering steps, you can use the `selGuides()` or `clustGuides()` functions, respectively, without re-running the entire `addGuides()` pipeline.
 
 
 ## Calculating guide combinatorics
