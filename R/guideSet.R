@@ -3,7 +3,8 @@
 #' @slot genome BSgenome object.
 #' @slot tes GRanges object
 #' @slot cis GRanges object
-#' @slot refdir GRanges object
+#' @slot refdir Character
+#' @slot tempdir Character
 #' @slot targets GRanges object
 #' @slot blacklist GRanges object
 #' @slot whitelist GRanges object
@@ -26,6 +27,7 @@ guideSet <-
                                  tes = 'GRanges',
                                  cis = 'GRanges',
                                  refdir = 'character',
+                                 temp = 'character',
                                  targets = 'GRanges',
                                  blacklist = 'GRanges',
                                  whitelist = 'GRanges',
@@ -53,6 +55,7 @@ setMethod(
            tes,
            cis,
            refdir,
+           temp,
            blacklist,
            whitelist,
            n_cores,
@@ -66,6 +69,7 @@ setMethod(
       {
         genome <- .keepBSgenomeSequences(genome, grep('_', seqnames(genome), value = TRUE, invert = TRUE))
       }
+      if (is.null(temp)) { temp <- tempdir() }
       
       # Check Bowtie reference directory
       if (fs::is_dir(refdir))
@@ -95,6 +99,7 @@ setMethod(
       .Object@whitelist <- whitelist
       .Object@plots <- list('targets' = list(), 'guides' = list(), 'combinations' = list())
       .Object@refdir <- refdir
+      .Object@temp <- temp
       .Object@.n_cores <- n_cores  
       .Object@.seed <- seed
       
@@ -161,6 +166,7 @@ setGeneric('export', function(guideSet, ...) standardGeneric('export'), signatur
 #' @param cis Path to bed file with cis regulatory feature coordinates or GRanges object (optional).
 #' @param blacklist Path to bed file with blacklisted regions or GRanges object (optional). Guides binding to \code{blacklist} regions are blacklisted.
 #' @param whitelist Path to bed file with whitelisted regions or GRanges object (optional). Guide off-target binding to \code{whitelist} regions are scored neutrally.
+#' @param temp Path to directory where temporary files are stored. Needs to be read- and writeable with sufficient storage space for large file sizes. If \code{NULL} (the default), is set to the return value of \code{tempdir()}.
 #' @param n_cores Integer. Number of cores to use for downstream functions. If \code{NULL} (the default), detects the number of cores automatically. The [doMC](https://cran.r-project.org/web/packages/doMC/index.html) packge must be installed to register the cores.
 #' @param refdir Path to search for bowtie index files. Will create new indeces in \code{refdir} if no corresponding files are found (i.e. do not match BSgenome prefix). If empty (the default), searches in the bowtie_indeces directory of the Repguide installation path.
 #' @param seed Integer. Seed for the random number generator. 19 by default.
@@ -183,9 +189,10 @@ createGuideSet <- function(genome,
                            cis = NULL, 
                            blacklist = NULL,
                            whitelist = NULL,
+                           temp = NULL,
                            n_cores = NULL, 
                            refdir = '', 
                            seed = 19)
 {
-  new('guideSet', genome, alt_chromosomes, tes, cis, refdir, blacklist, whitelist, n_cores, seed)
+  new('guideSet', genome, alt_chromosomes, tes, cis, refdir, temp, blacklist, whitelist, n_cores, seed)
 }                         

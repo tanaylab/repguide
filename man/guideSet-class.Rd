@@ -17,7 +17,9 @@ An S4 class to store genomic annotations and results of Repguide functions.
 
 \item{\code{cis}}{GRanges object}
 
-\item{\code{refdir}}{GRanges object}
+\item{\code{refdir}}{Character}
+
+\item{\code{tempdir}}{Character}
 
 \item{\code{targets}}{GRanges object}
 

@@ -5,8 +5,8 @@
 \title{Create new guideSet object}
 \usage{
 createGuideSet(genome, alt_chromosomes = FALSE, tes = NULL,
-  cis = NULL, blacklist = NULL, whitelist = NULL, n_cores = NULL,
-  refdir = "", seed = 19)
+  cis = NULL, blacklist = NULL, whitelist = NULL, temp = NULL,
+  n_cores = NULL, refdir = "", seed = 19)
 }
 \arguments{
 \item{genome}{BSgenome object (required). Target genome assembly stored as BSgenome object.}

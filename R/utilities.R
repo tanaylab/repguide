@@ -7,8 +7,8 @@
   index_dir <- guideSet@refdir
   n_cores <- guideSet@.n_cores
   guide_length <- guideSet@guide_length
-  kmers_file <- tempfile()
-  align_file <- tempfile()
+  kmers_file <- tempfile(tmpdir = guideSet@temp)
+  align_file <- tempfile(tmpdir = guideSet@temp)
   
   kmers <- guideSet@kmers$guide_seq
   fwrite(list(kmers), kmers_file)
@@ -58,7 +58,7 @@
   index_dir <- guideSet@refdir
     
   print ('Creating bowtie index, this may take a while')
-  genome_fasta_fn <- tempfile()
+  genome_fasta_fn <- tempfile(tmpdir = guideSet@temp)
     
   rtracklayer::export(genome, genome_fasta_fn, format = 'fasta', compress = FALSE)
   #system(glue('chmod 777 {genome_fasta_fn}'))
@@ -183,8 +183,8 @@ binGenome <- function(genome, bin_width = 250)
   n_cores <- guideSet@.n_cores
   print ('Computing kmer universe')
   
-  seq_file <- tempfile()
-  kmers_file <- tempfile()
+  seq_file <- tempfile(tmpdir = guideSet@temp)
+  kmers_file <- tempfile(tmpdir = guideSet@temp)
   
   # Write target seqs to file for jellyfish
   Biostrings::writeXStringSet(guideSet@targets$seq, filepath = seq_file, format = 'fasta')
