@@ -18,7 +18,6 @@ Imports:
   DECIPHER,
   data.table,
   dplyr,
-  doMC,
   fastcluster,
   forcats,
   foreach,
@@ -44,6 +43,7 @@ Imports:
 RoxygenNote: 6.1.1
 Roxygen: list(markdown = TRUE)
 Suggests: 
+    doMC,
     knitr,
     rmarkdown,
     testthat
