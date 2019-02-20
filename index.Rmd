@@ -16,7 +16,7 @@ The Repguide R package is a _beta_ development version to facilitate the design 
 
 ### Functionality
 
-The basic workflow consists of exploring and selecting target sites, computing the guideRNA universe, and finding the optimal combination of guides that maximizes user-defined scoring:
+The basic workflow consists of exploring and selecting target sites, computing the guideRNA universe, and finding the optimal combination of guides that maximizes target-specific coverage.
  
 ```{r pressure, echo = FALSE, out.width = '90%', fig.align='center'}
 knitr::include_graphics('man/figures/schematic.png')
@@ -28,11 +28,11 @@ knitr::include_graphics('man/figures/schematic.png')
  * Black- and whitelisting
  * Multiple sequence alignment
  * Promoter identification
- * Consensus targeting
- * Genomic mapping
+ * Consensus positional targeting
+ * Genome-wide mapping
  * On and off-target scoring
- * Combinatorial optimization for multiple guides
- * Quality control reports
+ * Combinatorial optimization (multiple guides)
+ * High-quality reports
  
 More details on the usage of Repguide is available in the package [vignette](https://tanaylab.bitbucket.io/Repguide/articles/Repguide.html). 
 
@@ -49,4 +49,4 @@ options(repos = c(getOption("repos"), BiocManager::repositories()))
 devtools::install_bitbucket('tanaylab/repguide', ref='default')
 ```
 
-**Note**: Repguide currently requires Unix environment. In particular it uses the Tanay group tgstat library that utilizes shared memory and distributed computing (as well as some specific optional CPU features).
+**Note**: Repguide is implemented in R and currently depends on the Tanay group tgstat library that utilizes shared memory and distributed computing (as well as some specific optional CPU features). The package is tested on linux and should run on macbooks (Windows is currently not supported). A typical application will require at least 4GB RAM, but heavier usecases (e.g. large guideRNA universe) may require 8 GB RAM or more. For improved speed performance, we recommend a multi-CPU/core workstation.

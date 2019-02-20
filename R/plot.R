@@ -831,10 +831,15 @@ plotCombinations <- function(guideSet)
                            labels = c('d', 'e', 'f'), ncol = 1)
                            
   liste <- list()
-  liste[['1']] <- p_target_cov
-  for(i in seq(2, (ncols - n_fams), 2))
-  { 
-    liste[[as.character(i)]] <- .plotEmpty('', border = FALSE)
+  liste[['fig']] <- p_target_cov
+  if (n_fams < 4)
+  {
+    i <- 1
+    while(i < 4)
+    { 
+      liste[[as.character(i)]] <- .plotEmpty('', border = FALSE)
+      i <- i + 1
+    }
   }
   p4 <- cowplot::plot_grid(plotlist = liste, labels = 'g', nrow = 1)                          
   p5 <- cowplot::plot_grid(p_cons_cov,

@@ -92,7 +92,7 @@
   
   foo <- function(df)
   {
-    res <- df %>% mutate(con_pos = start(pairwiseAlignment(seq, consensus, type = 'global-local')@subject))
+    res <- df %>% mutate(con_pos = start(pairwiseAlignment(guide_seq, consensus, type = 'global-local')@subject))
     return(res)
   }
   
@@ -109,7 +109,7 @@
   kmers_slim <- 
     kmers_full %>% 
       filter(repname %in% families) %>% 
-      select(kmer_id, strand, seq, repname) %>% 
+      select(kmer_id, strand, guide_seq, repname) %>% 
       distinct
     
   kmers_cons_df <- 

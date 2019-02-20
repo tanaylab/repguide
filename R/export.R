@@ -3,6 +3,7 @@ NULL
 
 setMethod("export", signature('guideSet'), function(guideSet, 
                                                     outdir = NULL, 
+                                                    full = FALSE,
                                                     force = FALSE, 
                                                     workspace = FALSE, 
                                                     dpi = 300) 
@@ -27,28 +28,33 @@ setMethod("export", signature('guideSet'), function(guideSet,
   ##############
   # full report
   ##############
-  
-  # export targets
-  if(length(guideSet@targets) > 0)
+  if (full)
   {
-    data.table::fwrite(as_tibble(guideSet@targets), file = paste0('full_stats/', 'targets.txt'), sep = '\t')
-  }
+    # export targets
+    if(length(guideSet@targets) > 0)
+    {
+      data.table::fwrite(as_tibble(guideSet@targets), file = paste0('full_stats/', 'targets.txt'), sep = '\t')
+    }
 
-  # export kmers
-  if(length(kmers) > 0)
-  {
-    data.table::fwrite(as_tibble(guideSet@kmers), file = paste0('full_stats/', 'kmers.txt'), sep = '\t')
-  }
-   
-  # export combinations
-  if(length(guideSet@combinations) > 0)
-  {
-    data.table::fwrite(tidyr::unnest(guideSet@combinations), file = paste0('full_stats/', 'combinations.txt'), sep = '\t')
+    # export kmers
+    kmers <- as_tibble(guideSet@kmers)
+    if(length(kmers) > 0)
+    {
+      data.table::fwrite(kmers, file = paste0('full_stats/', 'kmers.txt'), sep = '\t')
+    }
+     
+    # export combinations
+    if(length(guideSet@combinations) > 0)
+    {
+      data.table::fwrite(tidyr::unnest(guideSet@combinations), file = paste0('full_stats/', 'combinations.txt'), sep = '\t')
+    }
   }
   
   ##############
   # slim report
   ##############
+  
+  # export guide seqs
   .exportGuides(guideSet)
   
   # export plots
