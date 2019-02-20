@@ -5,27 +5,40 @@
 \title{Add guideRNA combinations to guideSet object.}
 \usage{
 addCombinations(guideSet, max_guides = 5, greedy = TRUE,
-  iterations = 10, method = c("max", "min", "ratio", "regression"),
-  coeff = 1, force = FALSE)
+  iterations = 10, alpha = 100, force = FALSE)
 }
 \arguments{
-\item{guideSet}{guideSet object containing guides.}
+\item{max_guides}{Numeric. Maximum number of distinct guides to consider when calculating combinations. Do not use a higher number than experimentally feasible.}
 
-\item{max_guides}{Numeric. Maximum number of distinct guides to consider when calculating combinations.}
+\item{greedy}{Logical. If \code{TRUE} (the default), performs an additional greedy search optimization for selected guide combinations.}
 
-\item{greedy}{Logical. If \code{TRUE} (the default), performs an additional greedy optimization for selected guide combinations.}
+\item{iterations}{Integer > 0. Number of greedy search iterations (10 by default).}
 
-\item{iterations}{Integer > 0. Number of greedy search iterations. Usually 10 iterations are sufficient for convergence.}
+\item{alpha}{Numeric. Off-target score coefficient. Large \code{alpha} penalizes combinations with high off-target score while \code{alpha = 0} ignores off-targets and picks combinations with highest on-target binding. Defaults to 10.}
+
+\item{force}{Logical. If \code{TRUE}, overwrites existing combinations.}
+
+\item{guideSet.}{guideSet object containing guides.}
 
 \item{method}{String. Method of how to pick the best guideRNA per cluster.}
 
 \item{coeff}{Integer. If \code{method} is \code{regression}, \code{coeff} modifies the slope of the linear regression.}
-
-\item{force}{Logical. If \code{TRUE}, overwrites existing results}
 }
 \value{
-Returns a guideSet object with combinations.
+Returns a guideSet object contaning combinations.
 }
 \description{
-Selects set of non-redundant guideRNAs and computes all potential combinations against targets of interest.
+Finds the optimal combination of non-redundant guideRNAs.
+}
+\examples{
+\dontrun{
+gs <- createGuideSet(Hsapiens, tes = te_annotation_df)
+gs <- addTargets(gs, targets = 'LTR13A')
+gs <- addGuides(gs, guide_length = 16)
+gs <- addCombinations(gs, max_guides = 8)
+gs <- plotCombinations(gs)
+}
+}
+\seealso{
+\code{\link[=plotCombinations]{plotCombinations()}}, \code{\link[=createGuideSet]{createGuideSet()}}, \code{\link[=addTargets]{addTargets()}}, and \code{\link[=addGuides]{addGuides()}}
 }

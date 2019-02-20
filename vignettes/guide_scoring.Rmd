@@ -12,29 +12,45 @@ vignette: >
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
-
-To define the binding affinity of a guide to its genomic target, we modified the scoring formula from *Breaking-Cas*[1] which assigns a score based on the total number and invidivual positions of the guides' mismatches:
+## Binding score
+To define the binding affinity of a guide to its genomic target, we modified the scoring formula from [Breaking-Cas](http://bioinfogp.cnb.csic.es/tools/breakingcas/) [1] which assigns a score based on the total number and invidivual positions of the guides' mismatches:
 $$ S_{bind} = \prod_{p\in{M}}(W_p)\times\frac{1}{\frac{guide\_length-d}{guide\_length}\ + 1}\times\frac{1}{m^{2}} $$
 Where *Wp* is the weight of a mismatch at position *p* (linear decrease with distance to PAM), *m* is the total number of mismatches, and *d* is a proxy for the average pairwise distance between all mismatches:
 $$d = \frac{max\_pos - min\_pos}{m - 1}$$
-Perfectly complementary binding sites are scored with a value of 1, while binding sites with a single mismatch will reduce binding score by at least 0.5. This scoring scheme is consistent with emperical data from (REF)[3].
+Perfectly complementary binding sites are scored with a value of 1, while binding sites with a single mismatch will reduce binding score by at least 0.5. This scoring scheme is consistent with emperical data from Gilbert et al., 2014 [2].
 
-We further score the impact of predicted genomic off-target sites by their basepair distance to the nearest cis-regulatory element (*cis*):
+## Cis score
+Since CRISPRi/a efficiency depends on dCas9 recruitment to regulatory features [3], we further score the impact of predicted genomic off-target sites by their basepair distance to the nearest cis-regulatory element (*cis*), consistent with reports:
 $$S_{cis} = {Top} + \frac{(Bottom - Top)}{1 + exp(\frac{V50 - cis}{Slope\times100})}$$
 This equation describes the Boltzmann sigmoid function, where V50 is the basepair distance at which the score is halfway between Top (1) and Bottom (0.1) (2kb by default) and slope represents the steepness of the sigmoid curve (5 by default). 
+
+## On- and off-target score
+
+### Per genomic binding site
 The final off-target score for a predicted off-target binding site is defined as the product of both scores:
 $$ S_{off} = S_{bind}\times S_{cis} $$
 while the on target score of an on-target binding site is simply defined as:
 $$ S_{on} = S_{bind} $$
+
+### Per guideRNA
 We then summarise the on- and off-target scores for a guide (*Sguide_off* and *Sguide_on*) over all predicted off- and on-target binding sites (Soff and Son) by first calculating the maximal score of a locus _l_ and guide _g_: 
 $$ Slocus_{on}(l,g) = \max_{b\in B_{l}} S_{on} $$
 $$ Slocus_{off}(l,g) = \max_{b\in B_{l}} S_{off} $$
 where *Bl* is the set of all the on/off-target binding sites of locus *l*. A Locus is defined as either the full-length transposon interval (variable size) or a genomic bin of size 250 bps by default. The total off- and on-target score of a guide is then simply defined as:
 $$ Sguide_{on}(g) = \sum\limits_{l\in L_{on}} Slocus_{on}(l,g) $$
 $$ Sguide_{off}(g) = \sum\limits_{l\in L_{off}} Slocus_{off}(l,g) $$
+
+### Per combination of guideRNAs
 Similarly, off- and on-target scores for combinations of guides (*Scomb*) are summarized for each locus l and guide g:
 $$ Scomb_{off}(c) = \sum\limits_{l\in L_{off}} \max_{g\in G} Slocus_{off}(l,g)  $$
 $$ Scomb_{on}(c) = \sum\limits_{l\in L_{on}} \max_{g\in G} Slocus_{on}(l,g)  $$
 
+## Optimal guideRNA combination
+Repguide suggests the ideal combination of guides based on the set that maximizes:
+$$ Scomb_{on} - Scomb_{off}\times \alpha $$
+Where the _alpha_ coefficient (defined by the user) determines the weight of predicted off-targets. 
+
 ## References
-[1] Breaking-Cas-interactive design of guide RNAs for CRISPR-Cas experiments for ENSEMBL genomes  
+[1] Oliveros, J. C. et al. Breaking-Cas-interactive design of guide RNAs for CRISPR-Cas experiments for ENSEMBL genomes. Nucleic Acids Res. (2016). doi:10.1093/nar/gkw407  
+[2] Gilbert, L. A. et al. Genome-Scale CRISPR-Mediated Control of Gene Repression and Activation. Cell (2014). doi:10.1016/j.cell.2014.09.029  
+[3] Radzisheuskaya, A., Shlyueva, D., Müller, I. & Helin, K. Optimizing sgRNA position markedly improves the efficiency of CRISPR/dCas9-mediated transcriptional repression. Nucleic Acids Res. (2016). doi:10.1093/nar/gkw583  

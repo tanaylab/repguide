@@ -1,7 +1,5 @@
 ---
-output: 
-  md_document: 
-    variant: markdown_github
+output: github_document
 ---
 
 ```{r, echo = FALSE}
@@ -17,8 +15,9 @@ The Repguide R package is a pre-alpha development version to facilitate the desi
 
 #### Functionality
 
+![](schematic.png)
 ```{r pressure, echo = FALSE, out.width = '90%', fig.align='center'}
-knitr::include_graphics('schematic.png')
+#knitr::include_graphics('schematic.png')
 ```
 
 #### Installation

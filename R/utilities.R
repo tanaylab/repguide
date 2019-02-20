@@ -6,10 +6,11 @@
   genome <- guideSet@genome
   index_dir <- guideSet@refdir
   n_cores <- guideSet@.n_cores
+  guide_length <- guideSet@guide_length
   kmers_file <- tempfile()
   align_file <- tempfile()
   
-  kmers <- guideSet@kmers$seq_guide
+  kmers <- guideSet@kmers$guide_seq
   fwrite(list(kmers), kmers_file)
   
   index_id <- genome@pkgname
@@ -27,10 +28,21 @@
                   force = TRUE)
                   
   kmers_mapped <- importKmers(align_file)
+
+  # Throw binding sites with NGG mismatch
+  base_pos <- paste(c(guide_length + 1, guide_length + 2) , collapse = '|')
+  kmers_mapped <- kmers_mapped[!stringr::str_detect(kmers_mapped$mismatches, base_pos)] # 0-based!
+  
+  # delete 'N' from NGG mismatches
+  base_pos <- paste0(guide_length, ':[ACGT]>[ACGT]')
+  kmers_mapped$mismatches <- stringr::str_replace(kmers_mapped$mismatches, base_pos, '')
+  
+  # Add number of mismatches
+  kmers_mapped$n_mismatches <- stringr::str_count(kmers_mapped$mismatches, stringr::fixed(':'))
   
   kmers_mapped$guide_seq <- # add guide mother seq
     left_join(as_tibble(kmers_mapped), 
-              tibble(guide_seq = kmers, kmer_id = 0:(length(kmers) -1)), 
+              tibble(guide_seq = substring(kmers, 1, guide_length), kmer_id = 0:(length(kmers) -1)), 
               by = 'kmer_id') %>%
     pull(guide_seq)
     
@@ -102,7 +114,7 @@ msaToLong <- function(msa)
     as.data.frame %>% 
     tibble::rownames_to_column() %>% 
     gather(pos, base, -rowname) %>% 
-    rename(te_id = rowname) %>% 
+    dplyr::rename(te_id = rowname) %>% 
     as_tibble %>% 
     #filter(base != '-') %>%
     mutate(pos = as.numeric(pos),
@@ -137,7 +149,7 @@ msaToLong <- function(msa)
     mutate(CpG = lag(base == 'C', n = 1) & base == 'G', 
            CpG = ifelse(lead(base == 'G', n = 1) & base == 'C', TRUE, CpG)) %>%
     select(te_id, pos, CpG) %>%
-    left_join(msa_long, .) %>%
+    left_join(msa_long, ., by = c('te_id', 'pos')) %>%
     replace_na(list(CpG = FALSE)) %>%
     mutate(CpG = ifelse(base == '-', NA, CpG))
   
@@ -152,89 +164,16 @@ binGenome <- function(genome, bin_width = 250)
   return(genomic_bins)
 }
 
-#' List transposable element families.
-#'
-#' Retrieves all available families in the provided guideSet that match defined characteristics.
-#'
-#' @param guideSet guideSet object to query.
-#' @param class Character. Only show families belonging to \code{class}.
-#' @param low_complexity Logical. Should low complexity families be returned.
-#' @return Character vector.
-#' @export
-listFamilies <- function(guideSet, 
-                         repclass = NULL, 
-                         low_complexity = FALSE)
+.getTSS <- function(genes)
 {
-  tes <- as_tibble(guideSet@tes) %>% select(repname, repclass) %>% distinct
-  if (!is.null(repclass)) 
-  {
-    tes <- filter(tes, repclass %in% repclass)
-  }
-  
-  if (!low_complexity)
-  {
-    tes <- filter(tes, repclass != 'Simple_repeat')
-  }
-  
-  res <- tes %>%  pull(repname) %>% sort
-  return(res)
-}
-
-clustGuides <- function(guideSet, 
-                        min_Son = 0,
-                        n_clust = 15)
-{
-  if(n_clust > 20) { stop('Maximal 20 clusters currently supported') }
-  message('Clustering kmers')
-  set.seed(guideSet@.seed)
-  kmers <- as_tibble(guideSet@kmers) %>% select(-matches('kmer_clust|te_clust'))
-  kmers_filt <- 
-    kmers %>%
-    filter(Son > min_Son & on_target == 1) %>%
-    filter(valid)
-    
-  if (nrow(kmers_filt) == 0) { stop ('No valid guides found, try relaxing selection parameters of addGuides function') }
-    
-  mat_full <- 
-    kmers_filt %>%
-    select(kmer_id, te_id, Son) %>%
-    .tidyToSparse()
-    
-  #mat_full = log2(mat_full+1)
-   
-  # mat_slim <- kmers %>%
-    # filter(on_target >= 0) %>%
-    # mutate(on_target = on_target * Sbind) %>%
-    # select(kmer_id, te_id, on_target) %>%
-    # tidyToSparse()  
-
-  print(paste0('Clustering ', nrow(mat), ' kmers into ', n_clust, ' groups'))
-  kmer_cors <- as.matrix(qlcMatrix::cosSparse(t(mat_full)))
-  #kmer_cors <- tgs_cor(as.matrix(t(mat)), spearman = TRUE)
-  kmer_clusts <- tibble(kmer_id = as.numeric(rownames(mat_full)),
-                        kmer_clust = as.numeric(cutree(fastcluster::hclust(tgstat::tgs_dist(kmer_cors), 'ward.D2'), n_clust)))
-                          
-  
-  if (ncol(mat_full) > 2e4) 
-  {
-    message ('Downsampling the matrix')
-    #vars <- matrixStats::colVars(mat_full)
-    vars <- apply(mat_full, 2, var)
-    mat <- mat_full[, tail(order(vars), 2e4)]
-  } else {
-    mat <- mat_full
-  }
-  
-  print(paste0('Clustering ', ncol(mat), ' loci into ', n_clust, ' groups'))
-  loci_cors <- as.matrix(qlcMatrix::cosSparse(mat))
-  loci_clusts <- tibble(te_id = as.numeric(colnames(mat)),
-                        te_clust = as.numeric(cutree(fastcluster::hclust(tgstat::tgs_dist(loci_cors), 'ward.D2'), n_clust)))   
-
-  kmers <- left_join(kmers, kmer_clusts, by = 'kmer_id') %>% left_join(., loci_clusts, by = 'te_id')                        
-  guideSet@kmers$kmer_clust <- kmers$kmer_clust
-  guideSet@kmers$te_clust <- kmers$te_clust
-  
-  return(guideSet)
+	transcripts = genes[genes$type == 'transcript']
+	end(transcripts[strand(transcripts) == '+']) = start(transcripts[strand(transcripts) == '+'])
+	#start(transcripts[strand(transcripts) == '+']) = start(transcripts[strand(transcripts) == '+']) - extend
+	
+	start(transcripts[strand(transcripts) == '-']) = end(transcripts[strand(transcripts) == '-'])
+	#end(transcripts[strand(transcripts) == '-']) = end(transcripts[strand(transcripts) == '-']) + extend
+	tss = unique(transcripts)
+	return(tss)
 }
 
 .jellyfish <- function(guideSet, lower_count = 2)
@@ -263,13 +202,13 @@ clustGuides <- function(guideSet,
     as_tibble %>%
     pull(V1)
     
-  guideSet@kmers <- GRanges(seqnames = 1:length(kmers_filt), ranges = 1:length(kmers_filt), seq_guide = kmers_filt)
+  guideSet@kmers <- GRanges(seqnames = 1:length(kmers_filt), ranges = 1:length(kmers_filt), guide_seq = kmers_filt)
   return(guideSet)
 }   
 
 makeGRangesFromDataFramePar <- function(df, keep.extra.columns = FALSE, n_cores = NULL)
 {
-  if (sum(colnames(df) %in% 'seqnames') == 0) { df <- df %>% rename(seqnames = chrom) }
+  if (sum(colnames(df) %in% 'seqnames') == 0) { df <- df %>% dplyr::rename(seqnames = chrom) }
   if (is.null(n_cores)) { n_cores <- max(parallel::detectCores(), length(unique(df$seqnames))) }
   
   #doMC::registerDoMC(n_cores)
@@ -286,7 +225,31 @@ makeGRangesFromDataFramePar <- function(df, keep.extra.columns = FALSE, n_cores 
   return(gr)
 }
 
-.rmGaps = function(alignment, max_gap_freq = 0.8)
+.plotEmpty <- function(string = 'NA', size = 3, border = TRUE)
+{
+  p <- 
+    ggplot() + 
+      annotate('text', x = 4, y = 25, size = size, label = string) +
+      theme(axis.line=element_blank(),
+      axis.text.x=element_blank(),
+      axis.text.y=element_blank(),
+      axis.ticks=element_blank(),
+      axis.title.x=element_blank(),
+      axis.title.y=element_blank(),
+      legend.position="none",
+      panel.background=element_blank(),
+      panel.grid.major=element_blank(),
+      panel.grid.minor=element_blank(),
+      plot.background=element_blank())
+      
+  if (!border)
+  {
+    p <- p + theme(panel.border = element_blank())
+  }
+  return(p)
+}
+
+.rmGaps <- function(alignment, max_gap_freq = 0.8)
 	{
 	alignment_bin = ape::as.DNAbin(alignment)
 	alignment_bin_wo_gaps = ape::del.colgapsonly(as.matrix(alignment_bin), max_gap_freq)
@@ -298,7 +261,7 @@ makeGRangesFromDataFramePar <- function(df, keep.extra.columns = FALSE, n_cores 
 	return(res)
 }
 
-.tidyToSparse = function(df_tidy)
+.tidyToSparse <- function(df_tidy)
 {
 	colnames(df_tidy) = c('a', 'b', 'c')
 	data = df_tidy %>%

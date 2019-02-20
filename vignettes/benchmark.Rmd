@@ -80,7 +80,7 @@ exp_sites[unique(hits@from)]$score_pred <-
 ## Plotting the results 
 
 We finally percent rank transform the predicted and experimental scores and visualize the results using `ggplot2`.
-```{r, fig.width = 7, fig.height = 3.5, fig.align='center'}
+```{r, fig.width = 7, fig.height = 3.1111111, fig.align='center'}
 ggdata <- 
   exp_sites %>% 
   as.data.frame %>% 
@@ -90,15 +90,20 @@ ggdata <-
 # Create plots         
 p_predicted_peaks  <- 
   ggdata %>% 
-  ggplot(aes(predicted)) + 
+  ggplot(aes(x = '', fill = predicted)) + 
     geom_bar() + 
-    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+    coord_polar("y", start = 0) +
+    theme(legend.position = 'none',
+          panel.border = element_blank(),
+          axis.title.x = element_blank(),
+          axis.title.y = element_blank())
 p_predicted_score <-              
   ggdata %>% 
-  ggplot(aes(x = predicted, y = score, group = predicted)) + 
+  ggplot(aes(x = predicted, y = score, group = predicted, fill = predicted)) + 
     geom_boxplot(outlier.shape = NA) + 
     geom_jitter(size = 1, alpha = 0.1) + 
-    theme(axis.text.x = element_text(angle = 90))
+    theme(axis.text.x = element_text(angle = 90)) +
+    theme(legend.position = 'none')
 p_score_comparison <- 
   ggdata %>% 
   filter(predicted) %>% 
@@ -108,10 +113,10 @@ p_score_comparison <-
 # Combine plots 
 cowplot::plot_grid(p_predicted_peaks, 
                    p_predicted_score,
-                   p_score_comparison, rel_widths = c(1, 1, 2), labels = 'auto', nrow = 1)
+                   p_score_comparison, rel_widths = c(1.5, 1, 2), labels = 'auto', nrow = 1)
 ```
 
-We can see that Repguide correctly predicted the vast majority of Cas9 peaks (__a__) and failed predictions generally showed weak ChIP enrichment (__b__). Moreover, computed binding scores were largely consistent with ChIP signal intensities (__c__), suggesting Repguide on and off-targetd scores can be interpreted quantitatively.
+We can see that Repguide correctly predicted more than 3/4 of experimentally determined Cas9 peaks (__a__) and failed predictions generally showed weak ChIP enrichment (__b__). Moreover, computed binding scores were largely consistent with ChIP signal intensities (__c__), suggesting Repguide on and off-targetd scores can be interpreted quantitatively.
 
 
 ## References

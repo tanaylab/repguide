@@ -6,6 +6,32 @@
 \usage{
 plotGuides(guideSet)
 }
+\arguments{
+\item{guideSet}{guideSet containing combinations.}
+}
+\value{
+list of ggplot objects.
+}
 \description{
-Generates guides QC plots
+Computes multiple QC plots and arranges into a figure with subpanels:
+\describe{
+\item{a}{ Number of guides passing blacklisting steps. }
+\item{b}{ Guide GC content distribution. Blacklisted guides are highlighted in red. }
+\item{c}{ Total on- and off-target score per valid (turquoise) and blacklisted (red) guides. }
+\item{d}{ Predicted binding score distribution per number of mismatch to genomic complement. }
+\item{e}{ Distance to the nearest cis regulatory feature (defined by \code{cis} in the \code{createGuideSet} function) and conversion into Scis score (red dotted line) }
+\item{f}{ On-target binding profile for valid guides (rows) along target loci (columns) (sampled for large matrices). Colors indicate predicted binding affinity. }
+\item{g}{ Selection of guide representative (large dot) per cluster (colors). Black color represents group of blacklisted guides. }
+}
+}
+\examples{
+\dontrun{
+gs <- createGuideSet(Hsapiens, tes = te_annotation_df)
+gs <- addTargets(gs, targets = 'LTR13A')
+gs <- addGuides(gs, guide_length = 16)
+gs <- plotGuides(gs)  
+}
+}
+\seealso{
+\code{\link[=addGuides]{addGuides()}}, and \code{\link[=export]{export()}}
 }

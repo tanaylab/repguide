@@ -17,7 +17,7 @@ setMethod("export", signature('guideSet'), function(guideSet,
   datum <- gsub('-', '', Sys.Date())
   zeit <- gsub(' ', '', gsub(':', '', format(Sys.time(), "%X")))
 
-  suffix <- paste0('guideR_report', '_', datum, '_', zeit, '/')
+  suffix <- paste0('Repguide_report', '_', datum, '_', zeit, '/')
   outdir <- ifelse(is.null(outdir), suffix, paste0(outdir, '/', suffix))
   dir.create(outdir, showWarnings = TRUE, recursive = FALSE, mode = "0777")
   dir.create(paste0(outdir, '/full_stats/'))

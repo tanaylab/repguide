@@ -2,43 +2,57 @@
 % Please edit documentation in R/add.R
 \name{addGuides}
 \alias{addGuides}
-\title{Add guides to a guideSet object.}
+\title{Add guideRNAs to guideSet object}
 \usage{
 addGuides(guideSet, guides = NULL, n_mismatches = 0,
-  guide_length = 19, gc_content = c(0.4, 0.8), min_Son = 10,
-  max_Soff = 50, consensus_range = NULL, n_clust = 11,
-  method = "max", coeff = 1, PAM = "NGG", lower_count = 5,
+  blacklist_penalty = 10, guide_length = 16, gc_content = c(0.4,
+  0.8), min_Son = NULL, max_Soff = NULL, consensus_range = NULL,
+  alpha = 100, n_clust = 11, PAM = "NGG", lower_count = 5,
   force = FALSE)
 }
 \arguments{
-\item{guideSet}{guideSet object with targets.}
+\item{guides}{Character. Optional vector of pre-computed guideRNA sequences to map and annotate. Will restrict downstream analysis to \code{guides} rather than computing all possible guides de novo.}
 
-\item{guides}{Character. Optional vector of pre-computed guideRNA sequences to map and annotate. Will restrict downstream analysis to this set of guides.}
+\item{n_mismatches}{Integer from 0 through 3. Maximal number of tolerated mismatches when assessing guideRNA binding targets. Defaults to 0.}
 
-\item{n_mismatches}{Single integer of either 0, 1, 2, or 3. Maximal number of tolerated mismatches when assessing guideRNA binding targets. Defaults to 0.}
+\item{guide_length}{Single integer between 12 and 26. Basepair size of the guideRNAs. Defaults to 16.}
 
-\item{guide_length}{Single integer between 15 and 25. Basepair size of the guideRNAs. Defaults to 19.}
+\item{gc_content}{Numeric vector of length two. Elements must be from 0 through 1. For example, c(0.4, 0.8) blacklists guides with GC content not between 40 and 80 percent. Passed to \code{selGuides()}.}
 
-\item{gc_content}{Numeric vector. Allowed GC content range of guides, e.g. c(0.4, 0.8) blacklists guides with GC content lower and higher than 40% and 80%, respectively}
+\item{min_Son}{Numeric. Minimal on target score of guides. If \code{NULL} (the default), will estimate a value based on the on score distribution. Passed to \code{selGuides()}.}
 
-\item{min_Son}{Numeric. Minimal on target score of guides. Defaults to 10.}
+\item{consensus_range}{Data.frame with repname, start, and end columns. Scores guideRNA target binding sites outside of provided consensus range neutrally. Passed to \code{selGuides()}}
 
-\item{consensus_range}{DataFrame with repname, start, and end columns. Discards guideRNAs targeting parts outside of \code{consensus_range} on the consensus.}
+\item{alpha}{Numeric. Off-target score coefficient. Large \code{alpha} penalizes guides with high off-target score while \code{alpha = 0} ignores off-targets and picks guides with highest on-target binding.}
 
-\item{n_clust}{Single positive integer <= 20. Number of groups to cluster guideRNAs into. 
-Higher \code{n_clust} usually gives better results but comes with a speed penalty.}
+\item{n_clust}{Single positive integer <= 20. Number of groups to cluster guideRNAs into. Higher n_clust usually gives better results but comes with a speed penalty when computing guide combinations. Passed to \code{clustGuides()}.}
 
 \item{PAM}{Character. Currently only 'NGG' PAM is supported.}
 
-\item{lower_count}{Numeric. Passed to jellyfish kmer counting. Only kmers occuring at least \code{lower_count} times are considered for mapping.}
+\item{lower_count}{Numeric. Passed to jellyfish kmer counting. Only kmers occuring at least \code{lower_count} times are considered for bowtie mapping.}
 
 \item{force}{Logical. If \code{TRUE}, overwrite existing guides.}
 
-\item{min_Soff}{Numeric. Maximal off target score of guides. Defaults to 50.}
+\item{guideSet.}{guideSet object containing targets.}
+
+\item{blacklist_penalty.}{Numeric. Off-target score multiplier (10 by default) for blacklisted genomic regions. Ignored if \code{blacklisted(guideSet)} is empty.}
+
+\item{min_Soff}{Numeric. Maximal off target score of guides. If \code{NULL} (the default), will estimate a value based on the off score distribution. Passed to \code{selGuides()}.}
 }
 \value{
 Returns a guideSet object containing guides.
 }
 \description{
-Adds all potential guideRNAs against the targets of interest.
+Computes target guideRNA universe and maps, annotates, and scores their genomic targets.
+}
+\examples{
+\dontrun{
+gs <- createGuideSet(Hsapiens, tes = te_annotation_df)
+gs <- addTargets(gs, targets = 'LTR13')
+gs <- addGuides(gs, guide_length = 16, n_mismatches = 0, gc_content = c(0.25, 0.9), n_clust = 12)
+gs <- plotGuides(gs)
+}
+}
+\seealso{
+\code{\link[=plotGuides]{plotGuides()}}, \code{\link[=createGuideSet]{createGuideSet()}}, \code{\link[=addTargets]{addTargets()}}, \code{\link[=addCombinations]{addCombinations()}}, \code{\link[=clustGuides]{clustGuides()}}, and \link{selGuides}
 }

@@ -1,9 +1,89 @@
-.compGuideScores <- function(guideSet) # Sbind can be interprated as the likelyhood of binding to a site (0 - 1)
+#' Cluster guideRNAs
+#'
+#' Clusters guides based on their target binding profile
+#'
+#' @param guideSet guideSet containing guide mappings
+#' @param min_Son Numeric from 0 through 1. Only considers genomic target binding sites above \code{min_Son} score.
+#' @param n_clust Integer from 1 to 20. Number of clusters to group guides into. Passed to \code{cutree()} function.
+#' @return guideSet object with clustered guides.
+#' @examples
+#' \dontrun{
+#' gs <- createGuideSet(Hsapiens, tes = te_annotation_df)
+#' gs <- addTargets(gs, targets = 'LTR13A')
+#' gs <- addGuides(gs, guide_length = 16)
+#' gs <- compClusts(gs, min_Son = 0.25, n_clust = 10)
+#' gs <- plotGuides(gs)
+#' }
+#' @seealso [addGuides()], and [plotGuides()]
+#' @export
+clustGuides <- function(guideSet, 
+                        min_Son = 0,
+                        n_clust = 15,
+                        alpha = 10)
+{
+  if(n_clust > 20) { stop('Maximal 20 clusters currently supported') }
+  message('Clustering kmers')
+  set.seed(guideSet@.seed)
+  kmers <- as_tibble(guideSet@kmers) %>% select(-matches('kmer_clust|te_clust'))
+  kmers_filt <- 
+    kmers %>%
+    filter(Son > min_Son & on_target == 1) %>%
+    filter(valid)
+    
+  if (nrow(kmers_filt) == 0) { stop ('No valid guides found, try relaxing selection parameters of addGuides function') }
+  if (length(unique(kmers_filt$kmer_id)) < n_clust) { stop ('Less valid guides than number of clusters') }
+  
+  mat_full <- 
+    kmers_filt %>%
+    select(kmer_id, te_id, Son) %>%
+    .tidyToSparse()
+    
+  #mat_full = log2(mat_full+1)
+   
+  # mat_slim <- kmers %>%
+    # filter(on_target >= 0) %>%
+    # mutate(on_target = on_target * Sbind) %>%
+    # select(kmer_id, te_id, on_target) %>%
+    # tidyToSparse()  
+
+  print(paste0('Clustering ', nrow(mat_full), ' kmers into ', n_clust, ' groups'))
+  kmer_cors <- as.matrix(qlcMatrix::cosSparse(t(mat_full)))
+  #kmer_cors <- tgs_cor(as.matrix(t(mat_full)), spearman = TRUE)
+  kmer_clusts <- tibble(kmer_id = as.numeric(rownames(mat_full)),
+                        kmer_clust = as.numeric(cutree(fastcluster::hclust(tgstat::tgs_dist(kmer_cors), 'ward.D2'), n_clust)))
+                          
+  
+  if (ncol(mat_full) > 2e4) 
+  {
+    message ('Downsampling the matrix')
+    #vars <- matrixStats::colVars(mat_full)
+    vars <- apply(mat_full, 2, var)
+    mat_full <- mat_full[, tail(order(vars), 2e4)]
+  } else {
+    mat_full <- mat_full
+  }
+  
+  print(paste0('Clustering ', ncol(mat_full), ' loci into ', n_clust, ' groups'))
+  loci_cors <- as.matrix(qlcMatrix::cosSparse(mat_full))
+  loci_clusts <- tibble(te_id = as.numeric(colnames(mat_full)),
+                        te_clust = as.numeric(cutree(fastcluster::hclust(tgstat::tgs_dist(loci_cors), 'ward.D2'), n_clust)))   
+
+  kmers <- left_join(kmers, kmer_clusts, by = 'kmer_id') %>% left_join(., loci_clusts, by = 'te_id')                        
+  guideSet@kmers$kmer_clust <- kmers$kmer_clust
+  guideSet@kmers$te_clust <- kmers$te_clust
+  
+  guideSet <- .selBestKmers(guideSet, alpha = alpha)
+  
+  return(guideSet)
+}
+
+.compGuideScores <- function(guideSet,
+                             blacklist_penalty = 10) # Sbind can be interprated as the likelyhood of binding to a site (0 - 1)
 {
   print('Computing guide scores')
   kmers <- as_tibble(guideSet@kmers) %>% select(-matches('Sbind'))
   PAM <- guideSet@PAM
-  guide_length <- guideSet@guide_length + nchar(PAM)
+  guide_length <- guideSet@guide_length # + nchar(PAM)
   max_mismatches <- max(kmers$n_mismatches)
   
   ###################
@@ -24,8 +104,8 @@
     
     # add mismatch score (Sbind), could be improved with data.table
     kmers <- 
-      left_join(kmers, 
-                mismatch_universe_scored) %>%
+      suppressMessages(left_join(kmers, 
+                mismatch_universe_scored)) %>%
       mutate(Sbind = ifelse(n_mismatches == 0, 1, Sbind))
   } else {
     kmers$Sbind <- 1
@@ -48,7 +128,12 @@
   
   # Compute Soff
   kmers$Soff <- kmers$Sbind * kmers$Scis
-  kmers <- kmers %>% mutate(Soff = ifelse(on_target >= 0, 0, Soff))
+  kmers <- 
+    kmers %>% 
+    mutate(Soff = ifelse(on_target >= 0, 0, Soff),
+                         Soff = ifelse(blacklisted, Soff * blacklist_penalty, Soff),
+                         Soff = ifelse(is.na(Soff), 0, Soff), # if Soff(0) x blacklist_penalty(Inf) = NaN
+                         Soff = ifelse(whitelisted, 0, Soff))
   #kmers$Soff <- round(kmers$Soff, 2)
   
   # Compute Son
@@ -171,7 +256,7 @@
                                                off_tot = length(unique_id[Soff > 0])),
                                                by = 'combi_id'] %>%
       as_tibble %>%
-      left_join(combinatorics_df) %>%
+      left_join(., combinatorics_df, by = 'combi_id') %>%
       arrange(n_guides) %>%
       nest(kmer_id, .key = 'kmer_id') %>%
       mutate(enr = ifelse(Soff_tot == 0, (Son_tot) / (Soff_tot + 0.01), Son_tot / Soff_tot)) # adding a pseudo-count to avoid Inf)
@@ -208,22 +293,6 @@
     kmers_final <- unlist(kmers_best)
   }
   return(guideSet)
-}
-
-                         
-
-
-compStats <- function(kmers)
-{
-  stats <-
-    kmers %>% 
-      filter(selected) %>% 
-      summarise(total_hits = sum(on_target), 
-                unique_hits = sum(on_target[!duplicated(te_id)]), 
-                total_off = sum(!on_target), 
-                total_blacklisted = sum(blacklisted))
-                
-  print(stats)
 }
 
 # Check multi processor performance
@@ -288,33 +357,32 @@ compStats <- function(kmers)
 }
 
 .compGreedy <- function(guideSet,
+                        alpha = 1,
                         iterations = 10)
 {
-  set.seed(guideSet@.seed)
+  if (alpha == Inf) { stop ('Alpha must be finite number') }
+  
   kmers <- as_tibble(guideSet@kmers) %>% filter(valid) %>% mutate(kmer_id = as.character(kmer_id))
   combinations <- guideSet@combinations %>% unnest
   max_n_guides <- max(combinations$n_guides)
   
   if (max_n_guides > 1)
   {
-    message('Running greedy optimization')
     # Create the score matrix
-    mat <- 
-      kmers %>%
-      mutate(score = ifelse(on_target == 1, Son, Soff)) %>%
-      select(kmer_id, unique_id, score) %>%
-      .tidyToSparse() %>%
-      as.matrix
-    on_indeces <- which(colnames(mat) %in% unique(kmers$unique_id[kmers$on_target == 1]))
-    off_indeces <- which(colnames(mat) %in% unique(kmers$unique_id[kmers$on_target == -1]))
-    mat[mat > 1] <- 1 # ceil indv loci score at 1 
+    kmers <- as.data.table(kmers)
+    mat <- kmers[, .(score = max(Son, Soff)), by = c('unique_id', 'kmer_id')] %>% .tidyToSparse
+    on_indeces <- which(rownames(mat) %in% unique(kmers$unique_id[kmers$on_target == 1]))
+    off_indeces <- which(rownames(mat) %in% unique(kmers$unique_id[kmers$on_target == -1]))
+    
+    message('Running greedy optimization on ', nrow(mat), ' x ', ncol(mat), ' dimensional matrix')
     
     report <- foreach::foreach (nguides = 2:max_n_guides, .combine = rbind) %dopar%
     {
+      set.seed(guideSet@.seed)
       # Get current best combination and calc stats
       kmers_best <- combinations %>% filter(n_guides == nguides & best) %>% pull(kmer_id) %>% as.character()
       #kmers_best <- sample(rownames(mat), nguides)
-      score_all_best <- matrixStats::colMaxs(mat[kmers_best, ])
+      score_all_best <- qlcMatrix::rowMax(mat[, kmers_best])
       score_on_best  <- sum(score_all_best[on_indeces])
       score_off_best <- sum(score_all_best[off_indeces])
       
@@ -327,42 +395,38 @@ compStats <- function(kmers)
            
       for (i in 1:iterations)
       {
-        #print(i)
+        message(nguides, ' guides greedy iteration: ', i)
         
-        #print(structure(c(nguides, i, score_on_best, score_off_best), 
-        #                names = c('N_guides', 'Iteration', 'Son_tot', 'Soff_tot')))
-       
         # Throw one kmer randomly
-        kmers_subs <- sample(kmers_best, length(kmers_best) -1)
+        kmers_subs <- sort(sample(kmers_best, length(kmers_best) - 1))
         
         # Score kmer subset
-        kmers_subs_score <- if (length(kmers_subs) == 1) { mat[kmers_subs,] } else { matrixStats::colMaxs(mat[kmers_subs, ]) }
+        kmers_subs_score <- if (length(kmers_subs) == 1) { mat[, kmers_subs] } else { qlcMatrix::rowMax(mat[, kmers_subs]) }
        
         # Score delta against all kmers
-        score_delta <- t(t(mat) - kmers_subs_score)
-        score_delta[score_delta < 0] <- 0
+        score_delta <- mat - kmers_subs_score
+        attr(score_delta, 'x')[attr(score_delta, 'x') < 0] <- 0
         
-        # Add best other kmer
-        kmers_new <- c(kmers_subs, names(which.max(rowSums(score_delta))))
+        # Find and add best other kmer
+        score_on_delta  <- Matrix::colSums(score_delta[on_indeces, ])
+        score_off_delta <- Matrix::colSums(score_delta[off_indeces, ])
+        
+        kmers_new <- c(kmers_subs, colnames(mat)[which.max(score_on_delta - score_off_delta * alpha)])
+        #kmers_new <- c(kmers_subs, colnames(mat)[which.max(score_on_delta)])
         
         # Score new subset
-        score_all_new <- matrixStats::colMaxs(mat[kmers_new, ])
+        score_all_new <- qlcMatrix::rowMax(mat[, kmers_new])
         score_on_new  <- sum(score_all_new[on_indeces])
         score_off_new <- sum(score_all_new[off_indeces])
             
         # Update kmers if optimized
-        if (score_on_new > score_on_best)
+        if ((score_on_new / score_off_new * alpha) > (score_on_best - score_off_best * alpha))
         {
           kmers_best <- kmers_new
           score_on_best <- score_on_new
           score_off_best <- score_off_new
         }
-        if (score_on_new == score_on_best & score_off_new < score_off_best)
-        {
-          kmers_best <- kmers_new
-          score_off_best <- score_off_new   
-        }
-        
+       
         # Update results df
         df[i, 'Son_tot']  <- score_on_best
         df[i, 'Soff_tot'] <- score_off_best
@@ -379,8 +443,8 @@ compStats <- function(kmers)
       report %>% 
       unnest %>% 
       group_by(iterations, n_guides) %>% 
-        mutate(on_tot = sum(colSums(mat[kmer_id, on_indeces] != 0)!=0),
-               off_tot = sum(colSums(mat[kmer_id, off_indeces] != 0)!=0)) %>%
+        mutate(on_tot = sum(Matrix::rowSums(mat[on_indeces, kmer_id] != 0)!=0),
+               off_tot = sum(Matrix::rowSums(mat[off_indeces, kmer_id] != 0)!=0)) %>%
       ungroup %>%
       mutate(kmer_id = as.double(kmer_id),
              enr = ifelse(Soff_tot == 0, (Son_tot) / (Soff_tot + 0.01), Son_tot / Soff_tot),

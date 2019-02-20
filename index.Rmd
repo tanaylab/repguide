@@ -1,0 +1,52 @@
+---
+output: github_document
+---
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "README-"
+)
+```
+
+# Repguide <img src="man/figures/logo.png" align="right" alt="" width="120" />
+
+The Repguide R package is a _beta_ development version to facilitate the design of guideRNAs for CRISPR/dCas9 targeting of repetitive DNA sequences, such as those derived from transposable elements. 
+
+### Functionality
+
+The basic workflow consists of exploring and selecting target sites, computing the guideRNA universe, and finding the optimal combination of guides that maximizes user-defined scoring:
+ 
+```{r pressure, echo = FALSE, out.width = '90%', fig.align='center'}
+knitr::include_graphics('man/figures/schematic.png')
+```
+
+#### Features include:
+ * Multi-species support
+ * Flexible genome annotation
+ * Black- and whitelisting
+ * Multiple sequence alignment
+ * Promoter identification
+ * Consensus targeting
+ * Genomic mapping
+ * On and off-target scoring
+ * Combinatorial optimization for multiple guides
+ * Quality control reports
+ 
+More details on the usage of Repguide is available in the package [vignette](https://tanaylab.bitbucket.io/Repguide/articles/Repguide.html). 
+
+### Installation
+
+```{r, eval=FALSE}
+# Install BiocManager, devtools, and tgstat (in case you haven't already)
+install.packages('BiocManager')
+install.packages('devtools')
+install.packages('tgstat', repos=c(getOption('repos'), 'https://tanaylab.bitbucket.io/repo'))
+
+# Install Repguide
+options(repos = c(getOption("repos"), BiocManager::repositories()))
+devtools::install_bitbucket('tanaylab/repguide', ref='default')
+```
+
+**Note**: Repguide currently requires Unix environment. In particular it uses the Tanay group tgstat library that utilizes shared memory and distributed computing (as well as some specific optional CPU features).

@@ -1,0 +1,64 @@
+# template:
+  # params:
+    # bootswatch: default
+
+authors:
+  David Brocks:
+    href: https://scholar.google.de/citations?user=ossdDj4AAAAJ&hl=en&oi=ao
+
+navbar:
+  title: "Repguide"
+  left:
+    - text: "Home"
+      icon: fa-home
+      href: index.html
+    - text: "Get started"
+      icon: fa-play-circle
+      href: articles/Repguide.html
+    - text: "Benchmark"
+      icon: fa-bar-chart
+      href: articles/benchmark.html
+    - text: "Guide scoring"
+      icon: fa-star
+      href: articles/guide_scoring.html
+    - text: "Reference"
+      href: reference/index.html
+      icon: fa-th-list
+  right:
+    - text: "Bitbucket"
+      icon: fa-bitbucket-square
+      href: https://bitbucket.org/tanaylab/repguide/src/default/
+
+reference:
+  - title: "Pipeline"
+    desc: >
+      Functions for running the entire workflow
+    contents: 
+      - starts_with("add")
+      - starts_with("create")
+      - 'clustGuides'
+      - 'selGuides'
+  - title: "Import/Export/Accessors"
+    desc: >
+      Functions for reading, writing and accessing guideSet objects
+    contents:
+      - 'blacklisted'
+      - 'combinations'
+      - 'export'
+      - 'mappings'
+      - 'repnames'
+  - title: "Visualization"
+    desc: >
+        Functions for generating QC plots
+    contents:
+    - starts_with("plot")
+  - title: "Datasets"
+    desc: >
+        Datasets provided with the Repguide package
+    contents:
+    - 'essential_genes'
+  - title: "Classes"
+    desc: >
+        Repguide S4 objects
+    contents:
+    - 'guideSet-class'

@@ -2,12 +2,48 @@
 % Please edit documentation in R/guideSet.R
 \name{createGuideSet}
 \alias{createGuideSet}
-\title{Creates a new guideSet object}
+\title{Create new guideSet object}
 \usage{
 createGuideSet(genome, alt_chromosomes = FALSE, tes = NULL,
   cis = NULL, blacklist = NULL, whitelist = NULL, n_cores = NULL,
   refdir = "", seed = 19)
 }
+\arguments{
+\item{genome}{BSgenome object (required). Target genome assembly stored as BSgenome object.}
+
+\item{alt_chromosomes}{Logical. If \code{FALSE} (the default), restricts genome annotation to the main chromosome assembly.}
+
+\item{tes}{Path to repeatmasker output file or GRanges object with 'repname' metacolumn (required).}
+
+\item{cis}{Path to bed file with cis regulatory feature coordinates or GRanges object (optional).}
+
+\item{blacklist}{Path to bed file with blacklisted regions or GRanges object (optional). Guides binding to \code{blacklist} regions are blacklisted.}
+
+\item{whitelist}{Path to bed file with whitelisted regions or GRanges object (optional). Guide off-target binding to \code{whitelist} regions are scored neutrally.}
+
+\item{n_cores}{Integer. Number of cores to use for downstream functions. If \code{NULL} (the default), detects the number of cores automatically. The \href{https://cran.r-project.org/web/packages/doMC/index.html}{doMC} packge must be installed to register the cores.}
+
+\item{refdir}{Path to search for bowtie index files. Will create new indeces in \code{refdir} if no corresponding files are found (i.e. do not match BSgenome prefix). If empty (the default), searches in the bowtie_indeces directory of the Repguide installation path.}
+
+\item{seed}{Integer. Seed for the random number generator. 19 by default.}
+}
+\value{
+guideSet object.
+}
 \description{
-Creates a new guideSet object
+Create new guideSet object
+}
+\examples{
+\dontrun{
+# Path to directory containing BSgenome.Hsapiens.UCSC.hg38 bowtie indeces (e.g. BSgenome.Hsapiens.UCSC.hg38.1.ebwt, ...)
+indexdir <-  system.file(package = 'Repguide', 'bowtie_indeces') 
+# Path to TE annotation file
+te_anno <- system.file(package = 'Repguide', 'extdata', 'hg38_ucsc_rmsk_ltr.txt.gz')
+
+gs <- createGuideSet(genome = BSgenome.Hsapiens.UCSC.hg38, tes = te_anno, refdir = indexdir)
+gs  
+}
+}
+\seealso{
+\code{\link[BSgenome:available.genomes]{BSgenome::available.genomes()}}, \href{http://bowtie-bio.sourceforge.net/manual.shtml}{bowtie manual}, and \href{http://www.repeatmasker.org/}{repeatmasker}
 }
