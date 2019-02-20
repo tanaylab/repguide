@@ -92,17 +92,6 @@ setMethod(
       
       if (is.null(tes$repname)) { stop ('No repname column found in TE annotation') }
       
-      .Object@genome <- genome
-      .Object@tes <- tes
-      .Object@cis <- cis
-      .Object@blacklist <- blacklist
-      .Object@whitelist <- whitelist
-      .Object@plots <- list('targets' = list(), 'guides' = list(), 'combinations' = list())
-      .Object@refdir <- refdir
-      .Object@temp <- temp
-      .Object@.n_cores <- n_cores  
-      .Object@.seed <- seed
-      
       if (is.element('doMC', installed.packages())[1]) 
       { 
         doMC::registerDoMC(n_cores) 
@@ -111,6 +100,17 @@ setMethod(
         n_cores <- 1
       }
       
+      .Object@genome <- genome
+      .Object@tes <- tes
+      .Object@cis <- cis
+      .Object@blacklist <- blacklist
+      .Object@whitelist <- whitelist
+      .Object@plots <- list('targets' = list(), 'guides' = list(), 'combinations' = list())
+      .Object@refdir <- refdir
+      .Object@temp <- normalizePath(temp)
+      .Object@.n_cores <- n_cores  
+      .Object@.seed <- seed
+            
       timestamp(prefix = 'Created new guideSet at ', suffix = '', quiet = FALSE)
       return(.Object)
     }
