@@ -2,13 +2,13 @@
 % Please edit documentation in R/add.R
 \name{addGuides}
 \alias{addGuides}
-\title{Add guideRNAs}
+\title{Add guideRNAs to guideSet object}
 \usage{
 addGuides(guideSet, guides = NULL, n_mismatches = 0,
   blacklist_penalty = 10, guide_length = 16, gc_content = c(0.4,
   0.8), min_Son = NULL, max_Soff = NULL, consensus_range = NULL,
-  n_clust = 11, method = "max", coeff = 1, PAM = "NGG",
-  lower_count = 5, force = FALSE)
+  alpha = 100, n_clust = 11, PAM = "NGG", lower_count = 5,
+  force = FALSE)
 }
 \arguments{
 \item{guides}{Character. Optional vector of pre-computed guideRNA sequences to map and annotate. Will restrict downstream analysis to \code{guides} rather than computing all possible guides de novo.}
@@ -22,6 +22,8 @@ addGuides(guideSet, guides = NULL, n_mismatches = 0,
 \item{min_Son}{Numeric. Minimal on target score of guides. If \code{NULL} (the default), will estimate a value based on the on score distribution. Passed to \code{selGuides()}.}
 
 \item{consensus_range}{Data.frame with repname, start, and end columns. Scores guideRNA target binding sites outside of provided consensus range neutrally. Passed to \code{selGuides()}}
+
+\item{alpha}{Numeric. Off-target score coefficient. Large \code{alpha} penalizes guides with high off-target score while \code{alpha = 0} ignores off-targets and picks guides with highest on-target binding.}
 
 \item{n_clust}{Single positive integer <= 20. Number of groups to cluster guideRNAs into. Higher n_clust usually gives better results but comes with a speed penalty when computing guide combinations. Passed to \code{clustGuides()}.}
 

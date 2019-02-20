@@ -1,4 +1,4 @@
-.annoGuides <- function(guideSet, blacklist_penalty)
+.annoGuides <- function(guideSet, blacklist_penalty, consensus_range = NULL)
 {
   guide_length <- guideSet@guide_length
   genomic_bins <- binGenome(guideSet@genome, bin_width = 500)
@@ -24,16 +24,16 @@
   kmers_unique$genomic_bin <- findOverlaps(kmers_unique, genomic_bins, minoverlap = floor(guide_length/2), select = 'first')
   
   # Add black/whitelisted
-  kmers_unique$blacklisted <- 1:length(kmers_unique) %in% findOverlaps(kmers_unique, blacklisted)@from
-  kmers_unique$whitelisted <- 1:length(kmers_unique) %in% findOverlaps(kmers_unique, whitelisted)@from
+  kmers_unique$blacklisted <- 1:length(kmers_unique) %in% findOverlaps(kmers_unique, blacklisted, ignore.strand = TRUE)@from
+  kmers_unique$whitelisted <- 1:length(kmers_unique) %in% findOverlaps(kmers_unique, whitelisted, ignore.strand = TRUE)@from
   
   # Add distance to nearest cis
   kmers_unique$cis_dist <- NA
-  hits <- distanceToNearest(kmers_unique, cis)
+  hits <- distanceToNearest(kmers_unique, cis, ignore.strand = TRUE)
   kmers_unique[hits@from]$cis_dist <- mcols(hits)$distance
   
   # Add TE id, repname, and on_target
-  hits_te         <- as_tibble(findOverlaps(kmers_unique, anno_te))
+  hits_te         <- as_tibble(findOverlaps(kmers_unique, anno_te, ignore.strand = TRUE))
   hits_te$repname <- anno_te[hits_te$subjectHits]$repname
   hits_te$te_id   <- anno_te[hits_te$subjectHits]$te_id
   hits_te         <- select(hits_te, -subjectHits)
@@ -48,7 +48,7 @@
                       kmers_unique, by = c('seqnames', 'start', 'end', 'strand', 'width'))
   
   # Add GC conent
-  kmer_gc <- as.numeric(letterFrequency(DNAStringSet(substring(kmers$guide_seq, 1, guide_length)), "GC"))
+  kmer_gc <- as.numeric(letterFrequency(DNAStringSet(kmers$guide_seq), "GC"))
   kmers$gc <- round(kmer_gc / guide_length, 2) 
   
   # Export results
@@ -60,6 +60,22 @@
     guideSet <- .annoConPos(guideSet)  
   } else {
     guideSet@kmers$con_pos <- NA
+  }
+  
+  # Set on-target 0 if mapping is outside of targeted consensus range
+  if (!is.null(consensus_range))
+  {
+    if (sum(colnames(consensus_range) %in% c('repname', 'start', 'end')) != 3) { stop ('Consensus range requires repname, start, end columns') }
+    
+    guideSet@kmers$on_target <- 
+      guideSet@kmers %>%
+      as_tibble %>%
+      right_join(consensus_range, 
+                 ., 
+                 by = 'repname', suffix = c('_con', '')) %>%
+      mutate(outside = con_pos < start_con | con_pos > end_con,
+             on_target = ifelse(!is.na(outside) & outside, 0, on_target)) %>%
+      pull(on_target)
   }
 
   # Compute guide scores
@@ -88,7 +104,7 @@
     as.data.frame %>% 
     rownames_to_column %>% 
     as_tibble %>% 
-    rename(repname = rowname, consensus = x)
+    dplyr::rename(repname = rowname, consensus = x)
     
   kmers_slim <- 
     kmers_full %>% 

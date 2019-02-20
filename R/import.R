@@ -38,9 +38,8 @@ importKmers <- function(filepath = 'path to bowtie mapped kmers')
     dplyr::rename(kmer_id = V1, strand = V2, chrom = V3, start = V4, seq = V5, n_mappings = V6, mismatches = V7) %>%
     mutate(start = start + 1, # adjust for difference between 0-based bowtie and 1-based GRanges
            end = start + nchar(seq) - 1,
-           n_mappings = n_mappings + 1,
-           n_mismatches = stringr::str_count(mismatches, stringr::fixed(':'))) %>%
-    replace_na(list(n_mismatches = 0))
+           n_mappings = n_mappings + 1) %>%
+    replace_na(list(mismatches = 0))
   
   if (nrow(kmers) > 5e7 & parallel::detectCores() > 20)
   {

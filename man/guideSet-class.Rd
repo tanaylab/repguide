@@ -4,9 +4,9 @@
 \name{guideSet-class}
 \alias{guideSet-class}
 \alias{guideSet}
-\title{An S4 class to store results of Repguide functions.}
+\title{An S4 class to store genomic annotations and results of Repguide functions.}
 \description{
-An S4 class to store results of Repguide functions.
+An S4 class to store genomic annotations and results of Repguide functions.
 }
 \section{Slots}{
 

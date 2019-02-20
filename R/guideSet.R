@@ -1,10 +1,3 @@
-.checkValidity <- function(object)
-{
-  if (length(subsetByOverlaps(object@whitelist, object@blacklist)) > 0) { stop ('Blacklisted and whitelisted intervals overlap') }
-   
-  return(TRUE)
-} 
-
 #' An S4 class to store genomic annotations and results of Repguide functions.
 #'
 #' @slot genome BSgenome object.
@@ -47,8 +40,8 @@ guideSet <-
                                  calls = 'list',
                                  .n_cores = 'numeric',
                                  .seed = 'numeric'
-                                ),
-           validity = .checkValidity)
+                                )
+          )
 
 setMethod(
   "initialize",
@@ -66,6 +59,7 @@ setMethod(
            seed
            ) 
     {        
+      if (class(genome) != 'BSgenome') { stop ('Provide a BSgenome object as genome') }
       if (is.null(tes)) { stop ('Provide transposable element annotation of genome') }
       # Filter alternative chromosomes from BSgenome
       if (!alt_chromosomes)
@@ -76,7 +70,7 @@ setMethod(
       # Check Bowtie reference directory
       if (fs::is_dir(refdir))
       {
-        message ('Searching for bowtie indeces in ', 'refdir')
+        message ('Searching for bowtie indeces in ', refdir)
       } else {
         refdir <- paste0(system.file(package = 'Repguide'), '/bowtie_indeces')
         dir.create(refdir, showWarnings = FALSE)
@@ -91,6 +85,8 @@ setMethod(
       whitelist <- suppressWarnings(.importOrNot(whitelist, genome))
       cis       <- suppressWarnings(.importOrNot(cis, genome))
       tes       <- suppressWarnings(.importOrNot(tes, genome))
+      
+      if (is.null(tes$repname)) { stop ('No repname column found in TE annotation') }
       
       .Object@genome <- genome
       .Object@tes <- tes
@@ -118,6 +114,8 @@ setMethod(
 setMethod("show", "guideSet", function(object) 
 { 
   genome_id <- object@genome@pkgname
+  n_tes <- length(object@tes)
+  n_fams <- length(unique(object@tes$repname))
   n_targets <- length(object@targets)
   n_blacklisted <- length(object@blacklist)
   n_guides <- length(unique(object@kmers$kmer_id[object@kmers$valid]))
@@ -128,6 +126,7 @@ setMethod("show", "guideSet", function(object)
   
   message(glue::glue('guideSet object of {genome_id}'))
   message(glue::glue('with {n_blacklisted} blacklisted regions'))
+  message(glue::glue('with {n_tes} loci from {n_fams} families'))
   message(glue::glue('with {n_targets} targets'))
   message(glue::glue('with {n_guides} valid guides'))
   message(glue::glue('with {n_combinations} combinations'))

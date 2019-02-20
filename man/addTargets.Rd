@@ -2,7 +2,7 @@
 % Please edit documentation in R/add.R
 \name{addTargets}
 \alias{addTargets}
-\title{Add targets to a guideSet object.}
+\title{Add targets to a guideSet object}
 \usage{
 addTargets(guideSet, targets = NULL, force = FALSE)
 }
@@ -17,7 +17,7 @@ addTargets(guideSet, targets = NULL, force = FALSE)
 Returns a guideSet object containing targets.
 }
 \description{
-Add targets to a guideSet object.
+Add targets to a guideSet object
 }
 \examples{
 \dontrun{

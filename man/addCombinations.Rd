@@ -5,23 +5,24 @@
 \title{Add guideRNA combinations to guideSet object.}
 \usage{
 addCombinations(guideSet, max_guides = 5, greedy = TRUE,
-  iterations = 10, method = c("max", "min", "ratio", "regression"),
-  coeff = 1, force = FALSE)
+  iterations = 10, alpha = 100, force = FALSE)
 }
 \arguments{
 \item{max_guides}{Numeric. Maximum number of distinct guides to consider when calculating combinations. Do not use a higher number than experimentally feasible.}
 
 \item{greedy}{Logical. If \code{TRUE} (the default), performs an additional greedy search optimization for selected guide combinations.}
 
-\item{iterations}{Integer > 0. Number of greedy search iterations. Usually 10 iterations are sufficient for convergence.}
+\item{iterations}{Integer > 0. Number of greedy search iterations (10 by default).}
 
-\item{method}{String. Method of how to pick the best guideRNA per cluster.}
-
-\item{coeff}{Integer. If \code{method} is \code{regression}, \code{coeff} modifies the slope of the linear regression.}
+\item{alpha}{Numeric. Off-target score coefficient. Large \code{alpha} penalizes combinations with high off-target score while \code{alpha = 0} ignores off-targets and picks combinations with highest on-target binding. Defaults to 10.}
 
 \item{force}{Logical. If \code{TRUE}, overwrites existing combinations.}
 
 \item{guideSet.}{guideSet object containing guides.}
+
+\item{method}{String. Method of how to pick the best guideRNA per cluster.}
+
+\item{coeff}{Integer. If \code{method} is \code{regression}, \code{coeff} modifies the slope of the linear regression.}
 }
 \value{
 Returns a guideSet object contaning combinations.

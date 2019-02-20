@@ -15,7 +15,7 @@ list of ggplot objects.
 \description{
 Computes multiple QC plots and arranges into a figure with subpanels:
 \describe{
-\item{(a)}{ Genomic copy-number vs average size (in kbs) of selected (red) vs all other families in guideSet. }
+\item{a}{ Genomic copy-number vs average size (in kbs) of selected (red) vs all other families in guideSet. }
 \item{b}{ Genomic copy-number of selected families on autosomes and sex chromosomes (other refers to alternative chromosome assemblies). }
 \item{c}{ Size distribution of selected families. }
 \item{d}{ Multiple sequence alignment of selected families. Rows represent individual loci and columns position on the alignment. }

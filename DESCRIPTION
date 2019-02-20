@@ -18,10 +18,12 @@ Imports:
   DECIPHER,
   data.table,
   dplyr,
+  doMC,
   fastcluster,
   forcats,
   foreach,
   fs,
+  gridExtra,
   GenomicRanges,
   ggplot2,
   glue,
@@ -36,12 +38,12 @@ Imports:
   qlcMatrix,
   scales,
   stringr,
+  stringdist,
   tibble,
   tidyr
 RoxygenNote: 6.1.1
 Roxygen: list(markdown = TRUE)
 Suggests: 
-    doMC,
     knitr,
     rmarkdown,
     testthat

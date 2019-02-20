@@ -6,10 +6,11 @@
   genome <- guideSet@genome
   index_dir <- guideSet@refdir
   n_cores <- guideSet@.n_cores
+  guide_length <- guideSet@guide_length
   kmers_file <- tempfile()
   align_file <- tempfile()
   
-  kmers <- guideSet@kmers$seq_guide
+  kmers <- guideSet@kmers$guide_seq
   fwrite(list(kmers), kmers_file)
   
   index_id <- genome@pkgname
@@ -27,10 +28,21 @@
                   force = TRUE)
                   
   kmers_mapped <- importKmers(align_file)
+
+  # Throw binding sites with NGG mismatch
+  base_pos <- paste(c(guide_length + 1, guide_length + 2) , collapse = '|')
+  kmers_mapped <- kmers_mapped[!stringr::str_detect(kmers_mapped$mismatches, base_pos)] # 0-based!
+  
+  # delete 'N' from NGG mismatches
+  base_pos <- paste0(guide_length, ':[ACGT]>[ACGT]')
+  kmers_mapped$mismatches <- stringr::str_replace(kmers_mapped$mismatches, base_pos, '')
+  
+  # Add number of mismatches
+  kmers_mapped$n_mismatches <- stringr::str_count(kmers_mapped$mismatches, stringr::fixed(':'))
   
   kmers_mapped$guide_seq <- # add guide mother seq
     left_join(as_tibble(kmers_mapped), 
-              tibble(guide_seq = kmers, kmer_id = 0:(length(kmers) -1)), 
+              tibble(guide_seq = substring(kmers, 1, guide_length), kmer_id = 0:(length(kmers) -1)), 
               by = 'kmer_id') %>%
     pull(guide_seq)
     
@@ -102,7 +114,7 @@ msaToLong <- function(msa)
     as.data.frame %>% 
     tibble::rownames_to_column() %>% 
     gather(pos, base, -rowname) %>% 
-    rename(te_id = rowname) %>% 
+    dplyr::rename(te_id = rowname) %>% 
     as_tibble %>% 
     #filter(base != '-') %>%
     mutate(pos = as.numeric(pos),
@@ -190,13 +202,13 @@ binGenome <- function(genome, bin_width = 250)
     as_tibble %>%
     pull(V1)
     
-  guideSet@kmers <- GRanges(seqnames = 1:length(kmers_filt), ranges = 1:length(kmers_filt), seq_guide = kmers_filt)
+  guideSet@kmers <- GRanges(seqnames = 1:length(kmers_filt), ranges = 1:length(kmers_filt), guide_seq = kmers_filt)
   return(guideSet)
 }   
 
 makeGRangesFromDataFramePar <- function(df, keep.extra.columns = FALSE, n_cores = NULL)
 {
-  if (sum(colnames(df) %in% 'seqnames') == 0) { df <- df %>% rename(seqnames = chrom) }
+  if (sum(colnames(df) %in% 'seqnames') == 0) { df <- df %>% dplyr::rename(seqnames = chrom) }
   if (is.null(n_cores)) { n_cores <- max(parallel::detectCores(), length(unique(df$seqnames))) }
   
   #doMC::registerDoMC(n_cores)
@@ -213,7 +225,31 @@ makeGRangesFromDataFramePar <- function(df, keep.extra.columns = FALSE, n_cores 
   return(gr)
 }
 
-.rmGaps = function(alignment, max_gap_freq = 0.8)
+.plotEmpty <- function(string = 'NA', size = 3, border = TRUE)
+{
+  p <- 
+    ggplot() + 
+      annotate('text', x = 4, y = 25, size = size, label = string) +
+      theme(axis.line=element_blank(),
+      axis.text.x=element_blank(),
+      axis.text.y=element_blank(),
+      axis.ticks=element_blank(),
+      axis.title.x=element_blank(),
+      axis.title.y=element_blank(),
+      legend.position="none",
+      panel.background=element_blank(),
+      panel.grid.major=element_blank(),
+      panel.grid.minor=element_blank(),
+      plot.background=element_blank())
+      
+  if (!border)
+  {
+    p <- p + theme(panel.border = element_blank())
+  }
+  return(p)
+}
+
+.rmGaps <- function(alignment, max_gap_freq = 0.8)
 	{
 	alignment_bin = ape::as.DNAbin(alignment)
 	alignment_bin_wo_gaps = ape::del.colgapsonly(as.matrix(alignment_bin), max_gap_freq)
@@ -225,7 +261,7 @@ makeGRangesFromDataFramePar <- function(df, keep.extra.columns = FALSE, n_cores 
 	return(res)
 }
 
-.tidyToSparse = function(df_tidy)
+.tidyToSparse <- function(df_tidy)
 {
 	colnames(df_tidy) = c('a', 'b', 'c')
 	data = df_tidy %>%

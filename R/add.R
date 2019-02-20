@@ -97,7 +97,8 @@ addAlignments <- function(guideSet,
 #' @param guideSet. guideSet object containing guides.
 #' @param max_guides Numeric. Maximum number of distinct guides to consider when calculating combinations. Do not use a higher number than experimentally feasible.
 #' @param greedy Logical. If \code{TRUE} (the default), performs an additional greedy search optimization for selected guide combinations.
-#' @param iterations Integer > 0. Number of greedy search iterations. Usually 10 iterations are sufficient for convergence.
+#' @param iterations Integer > 0. Number of greedy search iterations (10 by default).
+#' @param alpha Numeric. Off-target score coefficient. Large \code{alpha} penalizes combinations with high off-target score while \code{alpha = 0} ignores off-targets and picks combinations with highest on-target binding. Defaults to 10.
 #' @param method String. Method of how to pick the best guideRNA per cluster. 
 #' @param coeff Integer. If \code{method} is \code{regression}, \code{coeff} modifies the slope of the linear regression.
 #' @param force Logical. If \code{TRUE}, overwrites existing combinations.
@@ -116,8 +117,7 @@ addCombinations <- function(guideSet,
                             max_guides = 5,
                             greedy = TRUE,
                             iterations = 10,
-                            method = c('max', 'min', 'ratio', 'regression'),
-                            coeff = 1,
+                            alpha = 100,
                             force = FALSE)
 {
   if (length(guideSet@kmers) == 0) { stop('Add guides to guideSet using addGuides function before calling addCombinations') }
@@ -125,17 +125,18 @@ addCombinations <- function(guideSet,
   if (max_guides > length(unique(gs@kmers$kmer_id[gs@kmers$best]))) { stop ('max_guides cannot exceed number of selected guides') }
   
   # Remove downstream results
+  slot(guideSet, name = 'combinations') <- tibble()
   slot(guideSet, name = 'plots') <- list('targets' = guideSet@plots$targets, 'guides' = guideSet@plots$guides, 'combinations' = list())
   
   guideSet <- .compCombinations(guideSet, n_guides_max = max_guides)
-  guideSet <- .selBestKmers(guideSet, method = method, coeff = coeff)
-  if (greedy) { guideSet <- .compGreedy(guideSet, iterations) }
+  guideSet <- .selBestKmers(guideSet, alpha = alpha, type = 'combination')
+  if (greedy) { guideSet <- .compGreedy(guideSet, alpha, iterations) }
   
   guideSet@calls$combinations <- match.call()
   return(guideSet)
 }
 
-#' Add guideRNAs
+#' Add guideRNAs to guideSet object
 #'
 #' Computes target guideRNA universe and maps, annotates, and scores their genomic targets.
 #' 
@@ -149,6 +150,7 @@ addCombinations <- function(guideSet,
 #' @param min_Soff Numeric. Maximal off target score of guides. If \code{NULL} (the default), will estimate a value based on the off score distribution. Passed to \code{selGuides()}.
 #' @param n_clust Single positive integer <= 20. Number of groups to cluster guideRNAs into. Higher n_clust usually gives better results but comes with a speed penalty when computing guide combinations. Passed to \code{clustGuides()}.
 #' @param consensus_range Data.frame with repname, start, and end columns. Scores guideRNA target binding sites outside of provided consensus range neutrally. Passed to \code{selGuides()} 
+#' @param alpha Numeric. Off-target score coefficient. Large \code{alpha} penalizes guides with high off-target score while \code{alpha = 0} ignores off-targets and picks guides with highest on-target binding.
 #' @param PAM Character. Currently only 'NGG' PAM is supported.
 #' @param lower_count Numeric. Passed to jellyfish kmer counting. Only kmers occuring at least \code{lower_count} times are considered for bowtie mapping.
 #' @param force Logical. If \code{TRUE}, overwrite existing guides.
@@ -171,13 +173,13 @@ addGuides <- function(guideSet,
                       min_Son = NULL,
                       max_Soff = NULL,
                       consensus_range = NULL,
+                      alpha = 100,
                       n_clust = 11,
-                      method = 'max',
-                      coeff = 1,
                       PAM = 'NGG',
                       lower_count = 5,
                       force = FALSE)
 {
+  if (PAM != 'NGG') { stop ('Currently only NGG PAM is supported') }
   if (!is.null(guides) & class(guides) != 'character') { stop ('Provided guides must be a character vector') }
   if (length(unique(nchar(guides))) > 1) { stop ('guides must be of same length') }
   if (!n_mismatches %in% c(0, 1, 2, 3)) { stop('Mismatches must be 0, 1, 2, or 3') }
@@ -206,12 +208,11 @@ addGuides <- function(guideSet,
     guideSet@kmers <- GRanges(seqnames = 1:length(guides), ranges = 1:length(guides), seq_guide = guides)
   }
   guideSet <- .bowtie(guideSet, n_mismatches)
-  guideSet <- .annoGuides(guideSet, blacklist_penalty)
-  guideSet <- selGuides(guideSet, min_Son = min_Son, max_Soff = max_Soff, consensus_range = consensus_range, gc_content = gc_content)
+  guideSet <- .annoGuides(guideSet, blacklist_penalty, consensus_range = consensus_range)
+  guideSet <- selGuides(guideSet, min_Son = min_Son, max_Soff = max_Soff, gc_content = gc_content)
   if (is.null(guides) | length(guides) > 20) 
   { 
-    guideSet <- clustGuides(guideSet, n_clust = n_clust) 
-    guideSet <- .selBestKmers(guideSet, method = method, coeff = coeff)
+    guideSet <- clustGuides(guideSet, n_clust = n_clust, alpha = alpha) 
   } else { 
     guideSet@kmers$kmer_clust <- NA
     guideSet@kmers$te_clust <- NA
@@ -222,7 +223,7 @@ addGuides <- function(guideSet,
   return(guideSet)
 }   
 
-#' Add targets to a guideSet object.
+#' Add targets to a guideSet object
 #'
 #' @param guideSet. guideSet object containing genome annotation. 
 #' @param targets Character vector of family identifiers or GRanges object with coordinates and 'repname' metacolumn.
@@ -254,11 +255,24 @@ addTargets <- function(
                        
 {
   # Check if slot already exists
-  if(length(guideSet@targets) != 0 & !force)
+  if (length(guideSet@targets) != 0 & !force) { stop('guideSet already contains targets. Use force = TRUE to overwrite (will remove all downstream results)') }
+  if (is.null(targets)) { stop ('Please provide targets either as character vector of repname identifiers or GRanges object with coordinates and repname id') }
+  if (class(targets) == 'character' & sum(!targets %in% guideSet@tes$repname) > 0) 
   {
-    stop('guideSet already contains targets. Use force = TRUE to overwrite (will remove all downstream results)')
+    families <- unique(guideSet@tes$repname)
+    targets_not_found <- setdiff(targets, families)
+    if (length(targets_not_found) > 1)
+    {
+      suggestions <- families[apply(stringdist::stringdistmatrix(targets_not_found, families), 1, which.min)]
+      suggestions <- paste(suggestions, collapse = ', ')
+      targets_not_found <- paste(targets_not_found, collapse = ', ')
+    } else {
+      fam_dists <- structure(stringdist::stringdistmatrix(targets_not_found, families), names = families)
+      suggestions <- paste(names(head(sort(fam_dists), 5)), collapse = ', ')
+    }
+    stop (glue::glue("{targets_not_found} not found in guideSet annotation. Did you mean any of {suggestions}?"))
   }
-   
+  
   # Remove downstream results
   slot(guideSet, name = 'kmers') <- GRanges()
   slot(guideSet, name = 'combinations') <- tibble()
@@ -272,19 +286,16 @@ addTargets <- function(
   if (class(targets) != 'GRanges')
   {
     tes <- guideSet@tes
-    if (length(setdiff(targets, tes$repname)) > 0) { warning('Target(s) ', setdiff(targets, tes$repname), ' not found in guideSet') }
     targets <- tes[tes$repname %in% targets]  
   }
   
   if (class(targets)!= 'GRanges') { stop ('Targets must be family name(s) or a GRanges object') }
   
-  # Remove loci overlapping blacklisted regions from targets
+  # Remove target domains overlapping blacklisted regions
   if (length(guideSet@blacklist) > 0)
   {
-    blacklist <- guideSet@blacklist
-    start(blacklist) <- start(blacklist)
-    end(blacklist) <- end(blacklist)
-    targets <- targets[-findOverlaps(targets, blacklist, ignore.strand = TRUE)@from]
+    targets <- .selBlacklistRegions(targets, guideSet@blacklist)
+    if (length(targets) == 0) { stop ('No targets passed blacklisting, think of relaxing blacklisted regions') }
   }
   
   # Add locus seq column
@@ -293,6 +304,7 @@ addTargets <- function(
   guideSet@targets <- targets
   guideSet@families <- unique(guideSet@targets$repname)
   
+  if (length(guideSet@families) > 8) { warning ('Large number of families provided as targets. Think of reducing number!') }
   guideSet@calls$targets <- match.call()
   return(guideSet)
 }	
