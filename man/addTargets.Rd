@@ -7,11 +7,11 @@
 addTargets(guideSet, targets = NULL, force = FALSE)
 }
 \arguments{
+\item{guideSet}{guideSet object containing genome annotation.}
+
 \item{targets}{Character vector of family identifiers or GRanges object with coordinates and 'repname' metacolumn.}
 
 \item{force}{Logical. If \code{TRUE}, overwrites existing results.}
-
-\item{guideSet.}{guideSet object containing genome annotation.}
 }
 \value{
 Returns a guideSet object containing targets.
@@ -31,8 +31,9 @@ target_coords <- GenomicRanges::makeGRangesFromDataFrame(data.frame('chrom'   = 
                                                                     'start'   = c(1000, 10020),
                                                                     'end'     = c(1122, 10090),
                                                                     'strand'  = c('+', '-'),
-                                                                    'repname' = c('ImaginativeTE', 'ImaginativeTE')),
-                                                         , keep.extra.columns = TRUE)
+                                                                    'repname' = c('ImaginativeTE', 'ImaginativeTE'),
+                                                                    'te_id'  = c(1:2)),
+                                                         keep.extra.columns = TRUE)
 gs <- addTargets(guideSet, targets = target_coords)
 }
 }

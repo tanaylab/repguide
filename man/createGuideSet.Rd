@@ -21,6 +21,8 @@ createGuideSet(genome, alt_chromosomes = FALSE, tes = NULL,
 
 \item{whitelist}{Path to bed file with whitelisted regions or GRanges object (optional). Guide off-target binding to \code{whitelist} regions are scored neutrally.}
 
+\item{temp}{Path to directory where temporary files are stored. Needs to be read- and writeable with sufficient storage space for large file sizes. If \code{NULL} (the default), is set to the return value of \code{tempdir()}.}
+
 \item{n_cores}{Integer. Number of cores to use for downstream functions. If \code{NULL} (the default), detects the number of cores automatically. The \href{https://cran.r-project.org/web/packages/doMC/index.html}{doMC} packge must be installed to register the cores.}
 
 \item{refdir}{Path to search for bowtie index files. Will create new indeces in \code{refdir} if no corresponding files are found (i.e. do not match BSgenome prefix). If empty (the default), searches in the bowtie_indeces directory of the Repguide installation path.}
@@ -35,8 +37,11 @@ Create new guideSet object
 }
 \examples{
 \dontrun{
-# Path to directory containing BSgenome.Hsapiens.UCSC.hg38 bowtie indeces (e.g. BSgenome.Hsapiens.UCSC.hg38.1.ebwt, ...)
+library(BSgenome.Hsapiens.UCSC.hg38) 
+
+Path to directory containing BSgenome.Hsapiens.UCSC.hg38 bowtie indeces (e.g. BSgenome.Hsapiens.UCSC.hg38.1.ebwt, ...)
 indexdir <-  system.file(package = 'Repguide', 'bowtie_indeces') 
+
 # Path to TE annotation file
 te_anno <- system.file(package = 'Repguide', 'extdata', 'hg38_ucsc_rmsk_ltr.txt.gz')
 

@@ -419,7 +419,7 @@ plotTargets <- function(guideSet)
 #'   \item{b}{ Guide GC content distribution. Blacklisted guides are highlighted in red. }
 #'   \item{c}{ Total on- and off-target score per valid (turquoise) and blacklisted (red) guides. }
 #'   \item{d}{ Predicted binding score distribution per number of mismatch to genomic complement. }
-#'   \item{e}{ Distance to the nearest cis regulatory feature (defined by \code{cis} in the \code{createGuideSet} function) and conversion into Scis score (red dotted line) }
+#'   \item{e}{ Off-target frequency (right y-axis) by distance to nearest cis regulatory feature and conversion into Scis score (red dotted line, left y-axis). }
 #'   \item{f}{ On-target binding profile for valid guides (rows) along target loci (columns) (sampled for large matrices). Colors indicate predicted binding affinity. }
 #'   \item{g}{ Selection of guide representative (large dot) per cluster (colors). Black color represents group of blacklisted guides. }
 #' }
@@ -510,17 +510,26 @@ plotGuides <- function(guideSet)
         theme(legend.position = 'none')
   
   # Plot cis decay - shows all cis hits regardless of Sbind or n_mismatches
-  scaling_fact <- kmers %>% filter(on_target < 0 & cis_dist <= 100) %>% count %>% pull
+  kmers_close  <- kmers %>% filter(on_target < 0 & cis_dist <= 5000)
+  scaling_fact <- 
+    kmers_close %>%
+    mutate(cis_dist = cut(cis_dist, breaks = seq(1, 5000, 100), 
+                          include.lowest = TRUE,
+                          labels = FALSE)) %>% 
+    count(cis_dist) %>% 
+    pull(n) %>% 
+    max
   p_cis_decay <-
-    kmers %>% 
-      filter(on_target < 0) %>% #only off-targets
-      filter(cis_dist <= 5000) %>%
+    kmers_close %>%
       ggplot() + 
-        geom_histogram(aes(x = cis_dist, stat(count / scaling_fact)), binwidth = 150) +
+        geom_histogram(aes(x = cis_dist, stat(count/scaling_fact)), breaks = seq(1, 5000, 100)) +
         geom_line(aes(x = cis_dist, y = Scis), col = 'red', lty = 2) + # cis decay function
-        scale_y_continuous(limits = c(0, 5000), name = 'Scis', sec.axis = sec_axis(~.*scaling_fact, name = 'Count')) + 
-        xlab('Basepair distance to cis regulatory feature') +
-        theme(legend.position = 'none')
+        scale_y_continuous(breaks = c(0, 0.5, 1), name = 'Scis', sec.axis = sec_axis(~.*scaling_fact, name = 'Count')) + 
+        xlab('Off-target distance to cis regulatory feature (bps)') +
+        theme(legend.position = 'none',
+              axis.title.y.left = element_text(face = "italic", color = "red"),
+              axis.ticks.y.left = element_line(color = 'red'),
+              axis.text.y.left = element_text(color = 'red'))
   
   p_guide_hit_heatmap <- .plotClusts(guideSet)
   
@@ -592,8 +601,8 @@ plotGuides <- function(guideSet)
 #' Computes multiple QC plots and arranges into a figure with subpanels:
 #' \describe{
 #'   \item{a}{ Table showing total on/off-target scores (Son_tot and Soff_tot) for the best combination per number of guides (columns). }
-#'   \item{b}{ Total on- and off-target score per number of greedy search iterations. Colors indicate the number of guides (from yellow (at least 2) to black (defined by \code{max_guides} in the \code{addCombinations} function). }
-#'   \item{c}{ Total on- and off-target score per number of guides. }
+#'   \item{b}{ Total on- and off-target score per number of guides. }
+#'   \item{c}{ Total on- and off-target score per number of greedy search iterations. Colors indicate the number of guides (from yellow (at least 2) to black (defined by \code{max_guides} in the \code{addCombinations} function). }
 #'   \item{d}{ Total on- and off-target score for all computated combinations per number of guides. }
 #'   \item{e}{ Off-target coverage for the best guide combination per number of guides and off-target type (e.g. transposon family). Colors indicate predicted binding affinity to the off-target. }
 #'   \item{f}{ Distance to the nearest cis regulatory feature (defined by \code{cis} in the \code{createGuideSet} function) for the best combination number of guides. }
@@ -813,8 +822,8 @@ plotCombinations <- function(guideSet)
         
   
   plots <- list('a' = p_table, 
-                'b' = p_greedy_iterations,
-                'c' = p_on_off_bar, 
+                'b' = p_on_off_bar, 
+                'c' = p_greedy_iterations,
                 'd' = p_score_scatter, 
                 'e' = p_offtarget_cov, 
                 'f' = p_offtarget_dist, 
@@ -822,8 +831,8 @@ plotCombinations <- function(guideSet)
                 'h' = p_cons_cov) 
                 
   p1 <- cowplot::plot_grid(p_table, labels = 'a')
-  p2 <- cowplot::plot_grid(p_greedy_iterations,
-                           p_on_off_bar,
+  p2 <- cowplot::plot_grid(p_on_off_bar,
+                           p_greedy_iterations,
                            labels = c('b', 'c'), nrow = 1)
   p3 <- cowplot::plot_grid(p_score_scatter,  
                            p_offtarget_cov,

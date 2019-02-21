@@ -11,6 +11,8 @@ export(guideSet, ...)
 
 \item{outdir}{String. Creates a new directory with timestamp prefix in \code{outdir} and exports results. If \code{NULL} and \code{force = TRUE}, the folder is created in the current working directory.}
 
+\item{full}{Logical. If \code{TRUE}, additionally exports stats for all guideRNAs and combinations (instead of only selected guides).}
+
 \item{force}{Logical. If \code{TRUE} and \code{outdir = NULL}, writes output to new folder in current working directory.}
 
 \item{workspace}{Logical. If \code{FALSE} (the default), suppresses additional export of \code{guideSet} as .RData file.}

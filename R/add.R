@@ -225,7 +225,7 @@ addGuides <- function(guideSet,
 
 #' Add targets to a guideSet object
 #'
-#' @param guideSet. guideSet object containing genome annotation. 
+#' @param guideSet guideSet object containing genome annotation. 
 #' @param targets Character vector of family identifiers or GRanges object with coordinates and 'repname' metacolumn.
 #' @param force Logical. If \code{TRUE}, overwrites existing results.
 #' @return Returns a guideSet object containing targets.
@@ -241,8 +241,9 @@ addGuides <- function(guideSet,
 #'                                                                     'start'   = c(1000, 10020),
 #'                                                                     'end'     = c(1122, 10090),
 #'                                                                     'strand'  = c('+', '-'),
-#'                                                                     'repname' = c('ImaginativeTE', 'ImaginativeTE')),
-#'                                                          , keep.extra.columns = TRUE)
+#'                                                                     'repname' = c('ImaginativeTE', 'ImaginativeTE'),
+#'                                                                     'te_id'  = c(1:2)),
+#'                                                          keep.extra.columns = TRUE)
 #' gs <- addTargets(guideSet, targets = target_coords)
 #' }
 #' @seealso [plotTargets()], and [GenomicRanges::makeGRangesFromDataFrame()] 
@@ -290,6 +291,7 @@ addTargets <- function(
   }
   
   if (class(targets)!= 'GRanges') { stop ('Targets must be family name(s) or a GRanges object') }
+  if (is.null(targets$repname) | is.null(targets$te_id)) { stop ('GRanges must contain repname and te_id metadata columns') }
   
   # Remove target domains overlapping blacklisted regions
   if (length(guideSet@blacklist) > 0)

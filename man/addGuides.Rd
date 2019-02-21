@@ -5,7 +5,7 @@
 \title{Add guideRNAs to guideSet object}
 \usage{
 addGuides(guideSet, guides = NULL, n_mismatches = 0,
-  blacklist_penalty = 10, guide_length = 16, gc_content = c(0.4,
+  blacklist_penalty = 10, guide_length = 19, gc_content = c(0.4,
   0.8), min_Son = NULL, max_Soff = NULL, consensus_range = NULL,
   alpha = 100, n_clust = 11, PAM = "NGG", lower_count = 5,
   force = FALSE)

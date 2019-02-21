@@ -1,7 +1,6 @@
-# template:
-  # params:
-    # bootswatch: default
-
+template:
+  params:
+    bootswatch: yeti
 authors:
   David Brocks:
     href: https://scholar.google.de/citations?user=ossdDj4AAAAJ&hl=en&oi=ao

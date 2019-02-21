@@ -23,6 +23,9 @@ setMethod("mappings", signature("guideSet"), function(guideSet) {
 #' \dontrun{
 #' gs <- createGuideSet(genome = Hsapiens, tes = te_annotation_df)
 #' families <- repnames(gs, pattern = 'LTR12') # returns all families containing 'LTR12' in their name.
+#'
+#' # Using a pattern not found in guideSet will suggest similar hits, e.g.:
+#' repnames(gs, pattern = 'LTR5HS')
 #'}
 #' @seealso [createGuideSet()]
 #' @export

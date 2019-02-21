@@ -19,7 +19,7 @@ Computes multiple QC plots and arranges into a figure with subpanels:
 \item{b}{ Guide GC content distribution. Blacklisted guides are highlighted in red. }
 \item{c}{ Total on- and off-target score per valid (turquoise) and blacklisted (red) guides. }
 \item{d}{ Predicted binding score distribution per number of mismatch to genomic complement. }
-\item{e}{ Distance to the nearest cis regulatory feature (defined by \code{cis} in the \code{createGuideSet} function) and conversion into Scis score (red dotted line) }
+\item{e}{ Off-target frequency (right y-axis) by distance to nearest cis regulatory feature and conversion into Scis score (red dotted line, left y-axis). }
 \item{f}{ On-target binding profile for valid guides (rows) along target loci (columns) (sampled for large matrices). Colors indicate predicted binding affinity. }
 \item{g}{ Selection of guide representative (large dot) per cluster (colors). Black color represents group of blacklisted guides. }
 }

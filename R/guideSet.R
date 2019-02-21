@@ -90,7 +90,7 @@ setMethod(
       cis       <- suppressWarnings(.importOrNot(cis, genome))
       tes       <- suppressWarnings(.importOrNot(tes, genome))
       
-      if (is.null(tes$repname)) { stop ('No repname column found in TE annotation') }
+      if (is.null(tes$repname) | is.null(tes$te_id)) { stop ('TE annotation requires repname and te_id metadata columns') }
       
       if (is.element('doMC', installed.packages())[1]) 
       { 
@@ -174,8 +174,11 @@ setGeneric('export', function(guideSet, ...) standardGeneric('export'), signatur
 #' @return guideSet object.
 #' @examples
 #' \dontrun{
-#' # Path to directory containing BSgenome.Hsapiens.UCSC.hg38 bowtie indeces (e.g. BSgenome.Hsapiens.UCSC.hg38.1.ebwt, ...)
+#' library(BSgenome.Hsapiens.UCSC.hg38) 
+#'
+#' Path to directory containing BSgenome.Hsapiens.UCSC.hg38 bowtie indeces (e.g. BSgenome.Hsapiens.UCSC.hg38.1.ebwt, ...)
 #' indexdir <-  system.file(package = 'Repguide', 'bowtie_indeces') 
+#'
 #' # Path to TE annotation file
 #' te_anno <- system.file(package = 'Repguide', 'extdata', 'hg38_ucsc_rmsk_ltr.txt.gz')
 #' 

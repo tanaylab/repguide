@@ -16,8 +16,8 @@ list of ggplot objects.
 Computes multiple QC plots and arranges into a figure with subpanels:
 \describe{
 \item{a}{ Table showing total on/off-target scores (Son_tot and Soff_tot) for the best combination per number of guides (columns). }
-\item{b}{ Total on- and off-target score per number of greedy search iterations. Colors indicate the number of guides (from yellow (at least 2) to black (defined by \code{max_guides} in the \code{addCombinations} function). }
-\item{c}{ Total on- and off-target score per number of guides. }
+\item{b}{ Total on- and off-target score per number of guides. }
+\item{c}{ Total on- and off-target score per number of greedy search iterations. Colors indicate the number of guides (from yellow (at least 2) to black (defined by \code{max_guides} in the \code{addCombinations} function). }
 \item{d}{ Total on- and off-target score for all computated combinations per number of guides. }
 \item{e}{ Off-target coverage for the best guide combination per number of guides and off-target type (e.g. transposon family). Colors indicate predicted binding affinity to the off-target. }
 \item{f}{ Distance to the nearest cis regulatory feature (defined by \code{cis} in the \code{createGuideSet} function) for the best combination number of guides. }
