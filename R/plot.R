@@ -629,6 +629,7 @@ plotCombinations <- function(guideSet)
   kmers <- 
     guideSet@kmers %>%
     as_tibble %>%
+    mutate(repname = factor(repname, levels = guideSet@families)) %>%
     right_join(., 
               combinations %>% filter(best) %>% unnest, by= 'kmer_id', 
               suffix = c('_kmer', '_combi'))
@@ -794,7 +795,7 @@ plotCombinations <- function(guideSet)
       count(repname, n_guides, con_bin) %>%
       ggplot(aes(con_bin, n, fill = as.factor(n_guides))) + 
         geom_bar(stat = 'identity', position = 'dodge') + 
-        facet_wrap(~repname, scales = 'free_y', ncol = 2, strip.position = 'left') +
+        facet_wrap(~repname, scales = 'free_y', ncol = 2, strip.position = 'left', drop = FALSE) +
         #scale_y_continuous(breaks = .custom_breaks) +
         scale_fill_manual(values = n_guides_col) +
         scale_y_continuous(breaks = .custom_breaks) +
