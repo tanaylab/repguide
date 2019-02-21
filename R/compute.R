@@ -47,11 +47,11 @@ clustGuides <- function(guideSet,
     # tidyToSparse()  
 
   print(paste0('Clustering ', nrow(mat_full), ' kmers into ', n_clust, ' groups'))
-  kmer_cors <- as.matrix(qlcMatrix::cosSparse(t(mat_full)))
+  #kmer_cors <- as.matrix(qlcMatrix::cosSparse(t(mat_full)))
   #kmer_cors <- tgs_cor(as.matrix(t(mat_full)), spearman = TRUE)
   kmer_clusts <- tibble(kmer_id = as.numeric(rownames(mat_full)),
-                        kmer_clust = as.numeric(cutree(fastcluster::hclust(tgstat::tgs_dist(kmer_cors), 'ward.D2'), n_clust)))
-                          
+                        #kmer_clust = as.numeric(cutree(fastcluster::hclust(tgstat::tgs_dist(kmer_cors), 'ward.D2'), n_clust)))
+                        kmer_clust = skmeans::skmeans(mat_full, k = n_clust, method = 'pclust')$cluster)
   
   if (ncol(mat_full) > 2e4) 
   {
@@ -64,9 +64,10 @@ clustGuides <- function(guideSet,
   }
   
   print(paste0('Clustering ', ncol(mat_full), ' loci into ', n_clust, ' groups'))
-  loci_cors <- as.matrix(qlcMatrix::cosSparse(mat_full))
+  #loci_cors <- as.matrix(qlcMatrix::cosSparse(mat_full))
   loci_clusts <- tibble(te_id = as.numeric(colnames(mat_full)),
-                        te_clust = as.numeric(cutree(fastcluster::hclust(tgstat::tgs_dist(loci_cors), 'ward.D2'), n_clust)))   
+                        #te_clust = as.numeric(cutree(fastcluster::hclust(tgstat::tgs_dist(loci_cors), 'ward.D2'), n_clust)))   
+                        te_clust = skmeans::skmeans(t(mat_full), k = n_clust, method = 'pclust')$cluster)
 
   kmers <- left_join(kmers, kmer_clusts, by = 'kmer_id') %>% left_join(., loci_clusts, by = 'te_id')                        
   guideSet@kmers$kmer_clust <- kmers$kmer_clust
@@ -301,9 +302,9 @@ clustGuides <- function(guideSet,
                      max_gap_freq = 0.8,
                      iterations,
                      refinements,
-                     kmer_length = 7,
+                     kmer_length = 5,
                      n_clust = 10,
-                     clust_perc = 1,
+                     clust_perc = 2,
                      seed = 19) # ultrafast but rough MSA
 {
   set.seed(seed)
@@ -314,7 +315,6 @@ clustGuides <- function(guideSet,
       names(seqs) <- 1:length(seqs)
     }
   }
-  
   if (class(seqs) == 'GRanges')
   {
     seqs_gr <- seqs
@@ -326,19 +326,18 @@ clustGuides <- function(guideSet,
   
   seqs <- DNAStringSet(seqs)
   seqs <- seqs[width(seqs) < 9e4]
-  
   seqs_bin <- ape::as.DNAbin(seqs)
   clusts <- 
     tibble(te_id = names(seqs), 
-                 clust = cutree(fastcluster::hclust(tgstat::tgs_dist(kmer::kcount(seqs_bin, k = kmer_length)), 'ward.D2'), n_clust))
-  clust_sizes <- count(clusts, clust)
+           clust = skmeans::skmeans(kmer::kcount(seqs_bin, k = kmer_length), k = n_clust, method = 'pclust')$cluster) %>%
+    add_count(clust, name = 'clust_size')
     
   # sample ids per clust proportional to clust size
   ids_sel <- 
     clusts %>% 
     nest(te_id) %>% 
-    mutate(n = ceiling(clust_sizes$n / 100 * clust_perc),
-           samp = purrr::map2(data, n, sample_n)) %>% 
+    mutate(n_samp = ceiling(clust_size / 100 * clust_perc),
+           samp = purrr::map2(data, n_samp, sample_n)) %>% 
     select(clust, samp) %>% 
     unnest %>% 
     pull(te_id)
@@ -346,7 +345,7 @@ clustGuides <- function(guideSet,
   message(paste0('Aligning ', length(ids_sel), ' sequences'))
   
   alignment <- DECIPHER::AlignSeqs(seqs[ids_sel], 
-                                   #processors = n_cores, 
+                                   #processors = NULL, 
                                    iterations = iterations, 
                                    refinements = refinements, 
                                    useStructures = FALSE,

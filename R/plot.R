@@ -758,7 +758,7 @@ plotCombinations <- function(guideSet)
     count(n_guides, repname, Son_bin) %>% 
     ggplot(aes(n_guides, n, fill = Son_bin)) + 
       geom_bar(stat = 'identity') + 
-      facet_wrap(~repname, nrow = 1, scales = 'free_y') +
+      facet_wrap(~repname, nrow = 1, scales = 'free_y', drop = FALSE) +
       xlab('Guides (#)') + ylab('On-targets (#)') +
       theme(panel.spacing = unit(0.25, 'lines'),
             legend.position = 'right',

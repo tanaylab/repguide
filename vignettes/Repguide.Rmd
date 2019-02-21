@@ -27,14 +27,14 @@ if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 BiocManager::install("BSgenome.Hsapiens.UCSC.hg38")
 ```
-__Important__ __note__: Do not use repeat-masked BSgenome objects (contain 'masked' suffix, e.g. _BSgenome.Hsapiens.UCSC.hg38.masked_)!
+__Important__ __note__: Do not use __repeat-masked__ _BSgenome_ objects (contain 'masked' suffix, e.g. _BSgenome.Hsapiens.UCSC.hg38.masked_)!
 
 ### Genome annotation
 In addition to the assembled genome sequence, Repguide imports genomic coordinates of transposable elements (mandatory) and cis regulatory features (optional). A convient solution is to download transposon coordinates using the [UCSC table browser](https://genome.ucsc.edu/cgi-bin/hgTables) by selecting your genome of choice, group = Repeats, track = RepeatMasker, and output format = all fields from selected table. You can provide custom annotation as long as it provides the basic information about chromosome, start, end, strand, repname (family identifier), and te_id (unique locus identifier). In this tutorial, we will show you how to import such information using the provided example datasets. 
 
 ### Bowtie aligner
 Repguide uses a R implementation of the short read aligner [Bowtie](http://bowtie-bio.sourceforge.net/index.shtml) to map potential guideRNAs against the genome. Bowtie requires a FM index based on the Burrows-Wheeler transform to do so. 
-In case Repguide does not find the corresponding bowtie index files to your chosen genome, it will automatically create them. Since this take about an hour (depends on workstation and genome), you can also [download](ftp://ftp.ccb.jhu.edu/pub/data/bowtie_indexes/) the appropriate index files (if available), rename them following the format (BSgenome + suffix, see below) and provide the directory in the `refdir` argument of the `createGuideSet()` function.
+In case Repguide does not find the corresponding bowtie index files to your chosen genome, it will automatically create them. Since this takes about an hour (depends on workstation and genome), you can also [download](ftp://ftp.ccb.jhu.edu/pub/data/bowtie_indexes/) the appropriate index files (if available), rename them following the format (BSgenome + suffix, see below) and provide the directory in the `refdir` argument of the `createGuideSet()` function.
 
 Example naming of the human hg38 bowtie indeces:  
 
@@ -53,7 +53,7 @@ library(Repguide)
 library(BSgenome.Hsapiens.UCSC.hg38)
 ```
  
-We then create a _guideSet_ object, which is a S4 class to store genomic information and results of later functions. To create such object, we have to define the genome assembly and provide annotation on transposable elements and cis regulatory features (e.g. promoters/enhancers). While the latter is optional, we highly recommend it for optimal guideRNA design. In this tutorial, we will use the hg38 [UCSC](https://genome.ucsc.edu/cgi-bin/hgTables) repeatmasker output and [FANTOM5 TSS annotation](http://fantom.gsc.riken.jp/5/). We additionally blacklist promoter regions of essential human genes (see `?essential_genes` for further information). Those three datasets are included in the Repguide package. We can also specify the path to the corresponding bowtie index directory using the `refdir` parameter. If `refdir = NULL` (the default), Repguide will search for bowtie indeces in the package installation directory and create the indeces there if not found.
+We then create a _guideSet_ object, which is a S4 class to store genomic information and results of later functions. To create such object, we have to define the genome assembly and provide annotation about transposable elements and cis regulatory features (e.g. promoters/enhancers). While the latter is optional, we highly recommend it for optimal guideRNA design. In this tutorial, we will use the hg38 [UCSC](https://genome.ucsc.edu/cgi-bin/hgTables) repeatmasker output and [FANTOM5 TSS annotation](http://fantom.gsc.riken.jp/5/). We additionally blacklist promoter regions of essential human genes (see `?essential_genes` for further information). Those three datasets are included in the Repguide package. We can also specify the path to the corresponding bowtie index directory using the `refdir` parameter. If `refdir = NULL` (the default), Repguide will search for bowtie indeces in the package installation directory and create the indeces there if not found.
 ```{r, warning = FALSE}
 # Path to FANTOM5 hg38 TSS bed file (provided)
 tss_path <- system.file(package = 'Repguide', 
@@ -76,7 +76,7 @@ gs
 ```
 
 ## Adding target loci
-The generated _guideSet_ contains all annotation required to design guideRNAs against LTRs of the human genome. To add target sites, we can either provide names of repeat families we wish to target or a GRanges object with coordinates of the loci (__Important__ __note__: Such a GRanges object requires repname and te_id metadata columns compatible with the _guideSet's_ TE annotation).
+The generated _guideSet_ contains all annotation required to design guideRNAs against LTRs of the human genome. To add target sites, we can either provide names of repeat families we wish to target or a GRanges object with coordinates of the loci (__Important__ __note__: Such a GRanges object requires __repname__ and __te_id__ metadata columns compatible with the _guideSet's_ TE annotation, see examples of \code{?addTargets()}).
 
 We can retrieve the full list of available repeat families using the `repnames()` accessor function or search for specific families that match a specific pattern. For example, LTRs originating from the human endogenous retrovirus 9 all conveniently share a common 'LTR12' prefix (The [_Dfam_]( http://dfam.org/entry/DF0000399/relationships) database allows open access to transposon genetic relationships), allowing us to easily retrieve all its members by using regular expression:
 ```{r}
@@ -131,7 +131,7 @@ We then call the `addGuides()` function to compute our guide universe. More spec
 ```{r, warning = FALSE, message = TRUE}
 gs <- addGuides(gs,                             # our guideSet
                 n_mismatches = 2,               # max allowed mismatch of reported binding sites
-                min_Son = 50,                   # minimal score requirement for valid guides
+                min_Son = 100,                   # minimal score requirement for valid guides
                 guide_length = 19,              # length of the guideRNAs to design
                 consensus_range = consensus_df, # restrict guideRNA design to parts on consensus
                 gc_content = c(0.4, 0.8))       # allowed guide GC content (between 40 and 80 percent)
@@ -151,11 +151,11 @@ Multiplexing of several distinct guideRNAs for combined delivery may maximize re
 
 We calculate binding profiles of all possible combinations for up to 6 distinct guides by typing:
 ```{r}
-gs <- addCombinations(gs,             # our guideSet
+gs <- addCombinations(gs,              # our guideSet
                       iterations = 10, # number of greedy search iterations
-                      greedy = TRUE,  # run greedy algorithm
-                      alpha = 100,    # off-target score coefficient
-                      max_guides = 6) # maximal number of guides to consider
+                      greedy = TRUE,   # run greedy algorithm
+                      alpha = 100,     # off-target score penalty coefficient
+                      max_guides = 7)  # maximal number of guides to consider
 ```
 
 Having added the score statistics for computed combinations to our _guideSet_, we can inspect the results by entering:
@@ -170,15 +170,12 @@ We can finally save the relevant results and plots of our guideSet to a specifie
 ```{r, eval = FALSE}
 export(gs,
        outdir = tempdir(), 
-       dpi = 320, # image resolution,
-       full = TRUE, # exports stats for all guides, not only selected ones
+       dpi = 320,         # image resolution,
+       full = TRUE,       # exports stats for all guides, not only selected ones
        workspace = FALSE) # don't save guideSet as workspace
 ```
+This command will create a subdirectory in the specified outdir (or current working directory if `force = TRUE`) and export the results.
 
-Executing the command will create a subdirectory in the specified outdir (or current working directory if `force = TRUE`) and export the results.
-```{r, eval = FALSE}
-knitr::include_graphics(img1_path)
-```   
 
 # References
 [1] Daniel R Fuentes, Tomek Swigut, Joanna Wysocka. Systematic perturbation of retroviral LTRs reveals widespread long-range effects on human gene regulation. eLife (2018).  
