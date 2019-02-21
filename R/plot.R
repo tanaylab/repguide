@@ -629,7 +629,7 @@ plotCombinations <- function(guideSet)
   kmers <- 
     guideSet@kmers %>%
     as_tibble %>%
-    mutate(repname = factor(repname, levels = guideSet@families)) %>%
+    mutate(repname = factor(repname, levels = sort(guideSet@families))) %>%
     right_join(., 
               combinations %>% filter(best) %>% unnest, by= 'kmer_id', 
               suffix = c('_kmer', '_combi'))

@@ -29,7 +29,7 @@ addAlignments <- function(guideSet,
 {
   if (max_gap_freq < 0 | max_gap_freq > 1) { stop ('Max gap frequency must be between 0 and 1') }
   if(length(guideSet@alignments) != 0 & !force) { stop('guideSet already contains alignments. Use force = TRUE to overwrite (will remove all downstream results)')}
-  if(length(guideSet@targets == 0)) { stop('Add targets to guideSet using addTargets function before calling addAlignments') }
+  if(length(guideSet@targets) == 0) { stop('Add targets to guideSet using addTargets function before calling addAlignments') }
     
   # Remove downstream results
   slot(guideSet, name = 'kmers') <- GRanges()
@@ -205,7 +205,7 @@ addGuides <- function(guideSet,
   { 
     guideSet <- .jellyfish(guideSet, lower_count) 
   } else { 
-    guideSet@kmers <- GRanges(seqnames = 1:length(guides), ranges = 1:length(guides), seq_guide = guides)
+    guideSet@kmers <- GRanges(seqnames = 1:length(guides), ranges = 1:length(guides), guide_seq = guides)
   }
   guideSet <- .bowtie(guideSet, n_mismatches)
   guideSet <- .annoGuides(guideSet, blacklist_penalty, consensus_range = consensus_range)

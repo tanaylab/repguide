@@ -11,7 +11,7 @@
   align_file <- tempfile(tmpdir = guideSet@temp)
   
   kmers <- guideSet@kmers$guide_seq
-  fwrite(list(kmers), kmers_file)
+  data.table::fwrite(list(kmers), kmers_file)
   
   index_id <- genome@pkgname
   index_path <- paste0(index_dir, '/', index_id)
@@ -189,12 +189,12 @@ binGenome <- function(genome, bin_width = 250)
   # Write target seqs to file for jellyfish
   Biostrings::writeXStringSet(guideSet@targets$seq, filepath = seq_file, format = 'fasta')
   
-  jellyfish_path <- system.file(package = 'Repguide', 'bin', 'jellyfish-linux')
+  jellyfish_path <- system.file(package = 'Repguide', 'bin', ifelse(.Platform[[1]] == 'unix', 'jellyfish-linux', 'jellyfish-macosx'))
   
   cmd <- glue::glue("{jellyfish_path} count --mer-len {kmer_length} --size 100M --threads {n_cores} --out-counter-len 0 --lower-count {lower_count} --text {seq_file} --output {kmers_file} ")
   system(command = cmd)
   
-  kmers_all <- fread(kmers_file, skip = 1)
+  kmers_all <- data.table::fread(kmers_file, skip = 1)
   print('Select kmers with proper PAM')
   kmers_filt <-
     kmers_all %>%
@@ -202,7 +202,9 @@ binGenome <- function(genome, bin_width = 250)
     as_tibble %>%
     pull(V1)
     
-  guideSet@kmers <- GRanges(seqnames = 1:length(kmers_filt), ranges = 1:length(kmers_filt), guide_seq = kmers_filt)
+  guideSet@kmers <- GRanges(seqnames = 1:length(kmers_filt), 
+                            ranges = 1:length(kmers_filt), 
+                            guide_seq = kmers_filt)
   return(guideSet)
 }   
 
