@@ -39,7 +39,7 @@ More details on the usage of Repguide is available in the package [vignette](htt
 ### Installation
 
 ```{r, eval=FALSE}
-# Install BiocManager, devtools, and tgstat (in case you haven't already)
+# Install BiocManager and devtools (in case you haven't already)
 install.packages('BiocManager')
 install.packages('devtools')
 

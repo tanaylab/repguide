@@ -26,21 +26,23 @@ This equation describes the Boltzmann sigmoid function, where V50 is the basepai
 
 ## On- and off-target score
 
-### Per genomic binding site
+#### Per genomic binding site
 The final off-target score for a predicted off-target binding site is defined as the product of both scores:
 $$ S_{off} = S_{bind}\times S_{cis} $$
 while the on target score of an on-target binding site is simply defined as:
 $$ S_{on} = S_{bind} $$
 
-### Per guideRNA
 We then summarise the on- and off-target scores for a guide (*Sguide_off* and *Sguide_on*) over all predicted off- and on-target binding sites (Soff and Son) by first calculating the maximal score of a locus _l_ and guide _g_: 
 $$ Slocus_{on}(l,g) = \max_{b\in B_{l}} S_{on} $$
 $$ Slocus_{off}(l,g) = \max_{b\in B_{l}} S_{off} $$
-where *Bl* is the set of all the on/off-target binding sites of locus *l*. A Locus is defined as either the full-length transposon interval (variable size) or a genomic bin of size 250 bps by default. The total off- and on-target score of a guide is then simply defined as:
+where *Bl* is the set of all the on/off-target binding sites of locus *l*. A Locus is defined as either the full-length transposon interval (variable size) or a genomic bin of size 250 bps by default.
+
+#### Per guideRNA
+ The total off- and on-target score of a guide is then simply defined as:
 $$ Sguide_{on}(g) = \sum\limits_{l\in L_{on}} Slocus_{on}(l,g) $$
 $$ Sguide_{off}(g) = \sum\limits_{l\in L_{off}} Slocus_{off}(l,g) $$
 
-### Per combination of guideRNAs
+#### Per combination of guideRNAs
 Similarly, off- and on-target scores for combinations of guides (*Scomb*) are summarized for each locus l and guide g:
 $$ Scomb_{off}(c) = \sum\limits_{l\in L_{off}} \max_{g\in G} Slocus_{off}(l,g)  $$
 $$ Scomb_{on}(c) = \sum\limits_{l\in L_{on}} \max_{g\in G} Slocus_{on}(l,g)  $$
@@ -48,7 +50,7 @@ $$ Scomb_{on}(c) = \sum\limits_{l\in L_{on}} \max_{g\in G} Slocus_{on}(l,g)  $$
 ## Optimal guideRNA combination
 Repguide suggests the ideal combination of guides based on the set that maximizes:
 $$ Scomb_{on} - Scomb_{off}\times \alpha $$
-Where the _alpha_ coefficient (defined by the user) determines the weight of predicted off-targets. 
+Where the user-defined _alpha_ coefficient determines the weight of predicted off-targets. 
 
 ## References
 [1] Oliveros, J. C. et al. Breaking-Cas-interactive design of guide RNAs for CRISPR-Cas experiments for ENSEMBL genomes. Nucleic Acids Res. (2016). doi:10.1093/nar/gkw407  
