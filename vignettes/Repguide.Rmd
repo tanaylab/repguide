@@ -90,7 +90,7 @@ gs <- addTargets(gs,
                  targets = families) # Either character vector of repname identifier or GRanges object
 ```
 
-To inspect targeted families more closely or to design guideRNAs against specific parts of the families' consensus model, we can compute or import multiple sequence alignments. Repguide computes a rough multiple sequence alignment by weighted sampling (~2% from a families' total genomic sequences. While this approach is fast and usually sufficient to generate a representative consensus model, it might fail for highly polymorphic families. Therefore, Repguide also supports reading pre-computed multiple sequence alignments stored in fasta format. To import several such alignments, we first need to create a data.frame containing the family identifier of the alignment and the corresponding file's location:
+To inspect targeted families more closely or to design guideRNAs against specific parts of the families' consensus model, we can compute or import multiple sequence alignments. Repguide computes a rough multiple sequence alignment by weighted sampling (~2% from a families' total genomic sequences). While this approach is fast and usually sufficient to generate a representative consensus model, it might fail for highly polymorphic families. Therefore, Repguide also supports reading pre-computed multiple sequence alignments stored in fasta format. To import several such alignments, we first need to create a data.frame containing the family identifier of the alignment and the corresponding file's location:
 ```{r, warning = FALSE}
 # Path to data directory containg multiple sequence alignment files
 data_dir <- system.file(package = 'Repguide', 'extdata')
