@@ -189,7 +189,7 @@ binGenome <- function(genome, bin_width = 250)
   # Write target seqs to file for jellyfish
   Biostrings::writeXStringSet(guideSet@targets$seq, filepath = seq_file, format = 'fasta')
   
-  jellyfish_path <- system.file(package = 'Repguide', 'bin', ifelse(.Platform[[1]] == 'unix', 'jellyfish-linux', 'jellyfish-macosx'))
+  jellyfish_path <- system.file(package = 'Repguide', 'bin', ifelse(Sys.info()['sysname'] == 'Linux', 'jellyfish-linux', 'jellyfish-macosx'))
   
   cmd <- glue::glue("{jellyfish_path} count --mer-len {kmer_length} --size 100M --threads {n_cores} --out-counter-len 0 --lower-count {lower_count} --text {seq_file} --output {kmers_file} ")
   system(command = cmd)

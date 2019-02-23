@@ -90,7 +90,7 @@ gs <- addTargets(gs,
                  targets = families) # Either character vector of repname identifier or GRanges object
 ```
 
-To inspect targeted families more closely or to design guideRNAs against specific parts of the families' consensus model, we can compute or import multiple sequence alignments. Repguide computes a rough multiple sequence alignment by weighted sampling (~2% from a families' total genomic sequences. While this approach is fast and usually sufficient to generate a representative consensus model, it might fail for highly polymorphic families. Therefore, Repguide also supports reading pre-computed multiple sequence alignments stored in fasta format. To import several such alignments, we first need to create a data.frame containing the family identifier of the alignment and the corresponding file's location:
+To inspect targeted families more closely or to design guideRNAs against specific parts of the families' consensus model, we can compute or import multiple sequence alignments. Repguide computes a rough multiple sequence alignment by weighted sampling (~2% from a families' total genomic sequences). While this approach is fast and usually sufficient to generate a representative consensus model, it might fail for highly polymorphic families. Therefore, Repguide also supports reading pre-computed multiple sequence alignments stored in fasta format. To import several such alignments, we first need to create a data.frame containing the family identifier of the alignment and the corresponding file's location:
 ```{r, warning = FALSE}
 # Path to data directory containg multiple sequence alignment files
 data_dir <- system.file(package = 'Repguide', 'extdata')
@@ -126,12 +126,12 @@ consensus_df
 ```
 _Note_ _that_ _guide_ _target_ _binding_ _sites_ _outside_ _the_ _consensus_ _range_ _will_ _be_ _scored_ _neutrally_.  
 
-We then call the `addGuides()` function to compute our guide universe. More specifically, this function first calls [_jellyfish_](https://www.cbcb.umd.edu/software/jellyfish/) to calculate the 19mer (in our scenario) universe of specified targets, selects kmers with proper PAM sequence, and finds and annotates their putative genomic binding sites. Since most kmers are genetically similar and hence show redundanct binding profiles, Repguide finally clusters kmers into groups with homogenous binding profiles and marks the best kmer per cluster (the number of groups and selection procedure can be specified with the `n_clust` and `alpha` arguments of the `addGuides()` function). Depending on the target sequence complexity, guideRNA length, and allowed mismatches, the computation may take a bit.
+We then call the `addGuides()` function to compute our guide universe. More specifically, this function first calls [_jellyfish_](http://www.genome.umd.edu/jellyfish.html) to calculate the 19mer (in our scenario) universe of specified targets, selects kmers with proper PAM sequence, and finds and annotates their putative genomic binding sites. Since most kmers are genetically similar and hence show redundanct binding profiles, Repguide finally clusters kmers into groups with homogenous binding profiles and marks the best kmer per cluster (the number of groups and selection procedure can be specified with the `n_clust` and `alpha` arguments of the `addGuides()` function). Depending on the target sequence complexity, guideRNA length, and allowed mismatches, the computation may take a bit.
 
 ```{r, warning = FALSE, message = TRUE}
 gs <- addGuides(gs,                             # our guideSet
                 n_mismatches = 2,               # max allowed mismatch of reported binding sites
-                min_Son = 100,                   # minimal score requirement for valid guides
+                min_Son = 100,                  # minimal score requirement for valid guides
                 guide_length = 19,              # length of the guideRNAs to design
                 consensus_range = consensus_df, # restrict guideRNA design to parts on consensus
                 gc_content = c(0.4, 0.8))       # allowed guide GC content (between 40 and 80 percent)
