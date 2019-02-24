@@ -198,7 +198,7 @@ clustGuides <- function(guideSet,
     mismatch_universe %>%
     mutate(weight = apply(mismatch_universe[, !colnames(mismatch_universe) %in% c('m', 'max', 'min', 'd', 'weight')], 1, function(x)
                     {
-                      x <- 1 - x / guide_length
+                      x <- 1 - x / (guide_length + 1)
                       weight <- prod(x, na.rm = TRUE)
                     })
           )

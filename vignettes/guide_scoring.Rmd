@@ -14,8 +14,8 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
 ## Binding score
 To define the binding affinity of a guide to its genomic target, we modified the scoring formula from [Breaking-Cas](http://bioinfogp.cnb.csic.es/tools/breakingcas/) [1] which assigns a score based on the total number and invidivual positions of the guides' mismatches:
-$$ S_{bind} = \prod_{p\in{M}}(W_p)\times\frac{1}{\frac{guide\_length-d}{guide\_length}\ + 1}\times\frac{1}{m^{2}} $$
-Where *Wp* is the weight of a mismatch at position *p* (linear decrease with distance to PAM), *m* is the total number of mismatches, and *d* is a proxy for the average pairwise distance between all mismatches:
+$$ S_{bind} = \prod_{p\in{M}}(W_p)\times\frac{1}{\frac{n\_bps-d}{n\_bps}\ + 1}\times\frac{1}{m^{2}} $$
+Where _n_bps_ is defined as the length of the guideRNA - 1,  *Wp* is the weight of a mismatch at position *p* (linear decrease with distance to PAM), *m* is the total number of mismatches, and *d* is a proxy for the average pairwise distance between all mismatches:
 $$d = \frac{max\_pos - min\_pos}{m - 1}$$
 Perfectly complementary binding sites are scored with a value of 1, while binding sites with a single mismatch will reduce binding score by at least 0.5. This scoring scheme is consistent with emperical data from Gilbert et al., 2014 [2].
 
@@ -35,7 +35,7 @@ $$ S_{on} = S_{bind} $$
 We then summarise the on- and off-target scores for a guide (*Sguide_off* and *Sguide_on*) over all predicted off- and on-target binding sites (Soff and Son) by first calculating the maximal score of a locus _l_ and guide _g_: 
 $$ Slocus_{on}(l,g) = \max_{b\in B_{l}} S_{on} $$
 $$ Slocus_{off}(l,g) = \max_{b\in B_{l}} S_{off} $$
-where *Bl* is the set of all the on/off-target binding sites of locus *l*. A Locus is defined as either the full-length transposon interval (variable size) or a genomic bin of size 250 bps by default.
+where *Bl* is the set of all the on/off-target binding sites of locus *l*. A Locus is defined as either the full-length transposon interval (variable size) or a genomic bin of size 500 bps by default.
 
 #### Per guideRNA
  The total off- and on-target score of a guide is then simply defined as:

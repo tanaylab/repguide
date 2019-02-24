@@ -107,7 +107,7 @@ selGuides <- function(guideSet,
         stats %>%
         group_by(grouping_var) %>%
         mutate(alpha_score = Son_tot - Soff_tot * alpha,
-               best = alpha_score == max(alpha_score)) %>%
+               best = id == id[which.max(alpha_score)]) %>%
         ungroup %>%
         filter(best) %>%
         pull(id)

@@ -367,7 +367,7 @@ plotTargets <- function(guideSet)
       geom_bar(stat = 'identity') +
       ylab('Genomic copy number') +
       facet_wrap(~blacklisted, ncol = 1, scales = 'free_y') +
-      theme(axis.text.x = element_text(angle=90, hjust=1),
+      theme(axis.text.x = element_text(angle=90, vjust = 0.5),
             axis.title.x = element_blank(),
             legend.position = 'right',
             legend.key.width = unit(.3,"cm"),
@@ -385,7 +385,7 @@ plotTargets <- function(guideSet)
       scale_y_log10() +
       ylab('Size (basepairs)') +
       theme(legend.position = 'none',
-            axis.text.x = element_text(angle=90, hjust=1),
+            axis.text.x = element_text(angle=90, vjust = 0.5),
             axis.title.x = element_blank())
             
   p_msa <- plotMSA(guideSet)
@@ -455,7 +455,7 @@ plotGuides <- function(guideSet)
     ggplot(aes(key, value)) + 
       geom_bar(stat = 'identity') +
       ylab('Guides (#)') +
-      theme(axis.text.x = element_text(angle=90, hjust=1),
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5),
             axis.title.x = element_blank())      #+
       #geom_text(aes(label = value), position = position_dodge(width=0.9), vjust=-0.25)
   
@@ -468,7 +468,7 @@ plotGuides <- function(guideSet)
         geom_histogram(binwidth = 0.05) +
         xlim(0,1) +
         xlab('Guide GC content') + ylab('Count') +
-        theme(axis.text.x = element_text(angle=90, hjust=1),
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5),
               legend.position = 'none')
         
   # p_score_hist <-
@@ -552,7 +552,7 @@ plotGuides <- function(guideSet)
         ggplot2::guides(col = guide_legend(title = 'Cluster', ncol=2),
                shape = FALSE,
                size = FALSE) +
-        theme(axis.text.x = element_text(angle=90, hjust=1),
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5),
               #axis.ticks.x = element_blank(),
               #axis.text.y = element_blank(),
               #axis.ticks.y = element_blank(),
@@ -629,16 +629,18 @@ plotCombinations <- function(guideSet)
   kmers <- 
     guideSet@kmers %>%
     as_tibble %>%
-    mutate(repname = factor(repname, levels = sort(guideSet@families))) %>%
     right_join(., 
               combinations %>% filter(best) %>% unnest, by= 'kmer_id', 
               suffix = c('_kmer', '_combi'))
   
-  n_fams <- length(guideSet@families)
-  n_guides <- length(levels(kmers$n_guides))
-  ncols <- max(n_fams, n_guides)
-  n_guides_col <- colorRampPalette(c('gold', 'orange', 'darkred', 'black'))(n_guides)  
-
+  n_fams       <- length(guideSet@families)
+  n_guides     <- length(levels(kmers$n_guides))
+  ncols        <- max(n_fams, n_guides)
+  n_guides_col <- colorRampPalette(c("#F7FCFD", "#E0ECF4", "#BFD3E6", "#9EBCDA", "#8C96C6", "#8C6BB1", "#88419D", "#810F7C", "#4D004B"))(n_guides)
+  sbind_breaks <- c(0, 0.25, 0.5, 1.5, 2, 4, Inf)
+  sbind_labels <- c('(0, 0.25]', '(0.25, 0.5]', '[1, 1.5]', '(1.5, 2]', '(2, 4]', '>4')
+  sbind_col    <- colorRampPalette(c(RColorBrewer::brewer.pal(9, 'OrRd')))(6)
+  
   p_table <-
     combinations %>%
     filter(best) %>%
@@ -670,7 +672,7 @@ plotCombinations <- function(guideSet)
       scale_alpha_manual(values = c(0.1, 1)) +
       scale_size_manual(values = c(0.1, 2)) +
       xlab('Off-score') + ylab('On-score') +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1),
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5),
             legend.position = 'none',
             panel.spacing = unit(0.25, 'lines'))
             
@@ -711,7 +713,7 @@ plotCombinations <- function(guideSet)
     group_by(n_guides, unique_id, blacklisted) %>% 
       summarise(Sbind = sum(Sbind), repname = unique(repname)) %>% 
     ungroup %>%
-    mutate(Sbind_bin = cut(Sbind, breaks = c(0, 0.5, 1, 2, 4, Inf), include.lowest = TRUE),
+    mutate(Sbind_bin = cut(Sbind, breaks = sbind_breaks, labels = sbind_labels, include.lowest = TRUE),
            repname = ifelse(blacklisted, 'Blacklisted', repname),
            repname = ifelse(is.na(repname), 'Genomic', repname)) %>% 
     count(n_guides, repname, Sbind_bin) %>% 
@@ -719,6 +721,7 @@ plotCombinations <- function(guideSet)
     ggplot(aes(n_guides, n, fill = Sbind_bin)) + 
       geom_bar(stat = 'identity') + 
       scale_y_continuous(breaks = .custom_breaks) +
+      scale_fill_manual(values = sbind_col) +
       facet_wrap(~repname, nrow = 1, scales = 'free_y') +
       xlab('Guides (#)') + ylab('Off-targets (#)') +
       theme(#axis.text.x = element_text(angle = 90),
@@ -737,14 +740,15 @@ plotCombinations <- function(guideSet)
   {
     p_offtarget_dist <-
       ggdata %>%
-      ggplot(aes(cis_dist, fill = as.factor(n_guides))) + 
+      mutate(Sbind_bin = cut(Sbind, breaks = sbind_breaks, labels = sbind_labels, include.lowest = TRUE)) %>%
+      ggplot(aes(cis_dist, fill = as.factor(Sbind_bin))) + 
         geom_histogram(breaks = seq(0, 5000, 250)) + 
         facet_wrap(~n_guides, nrow = 1) + 
         xlim(0, 5000) +
-        scale_fill_manual(values = n_guides_col) +
-        xlab('Basepair distance to cis regulatory feature') + ylab('Count') +
+        scale_fill_manual(values = sbind_col) +
+        xlab('Distance to cis regulatory feature (bps)') + ylab('Off-targets (#)') +
         theme(legend.position = 'none',
-              axis.text.x = element_text(angle = 90))
+              axis.text.x = element_text(angle = 90, vjust = 0.5))
   } else {
     p_offtarget_dist <- .plotEmpty('No cis proximal off targets')   
   }
@@ -752,14 +756,16 @@ plotCombinations <- function(guideSet)
   p_target_cov <- 
     kmers %>% 
     filter(on_target > 0) %>% 
+    mutate(repname = factor(repname, levels = sort(unique(c(repname, guideSet@families))))) %>%
     group_by(n_guides, te_id) %>% 
-      summarise(Son = sum(Son), repname = unique(repname)) %>% 
+      summarise(Sbind = sum(Sbind), repname = unique(repname)) %>% 
     ungroup %>% 
-    mutate(Son_bin = cut(Son, breaks = c(0, 0.5, 1, 2, 4, Inf), include.lowest = TRUE)) %>% 
-    count(n_guides, repname, Son_bin) %>% 
-    ggplot(aes(n_guides, n, fill = Son_bin)) + 
+    mutate(Sbind_bin = cut(Sbind, breaks = sbind_breaks, labels = sbind_labels, include.lowest = TRUE)) %>% 
+    count(n_guides, repname, Sbind_bin) %>% 
+    ggplot(aes(n_guides, n, fill = Sbind_bin)) + 
       geom_bar(stat = 'identity') + 
       facet_wrap(~repname, nrow = 1, scales = 'free_y', drop = FALSE) +
+      scale_fill_manual(values = sbind_col) +
       xlab('Guides (#)') + ylab('On-targets (#)') +
       theme(panel.spacing = unit(0.25, 'lines'),
             legend.position = 'right',
@@ -801,7 +807,7 @@ plotCombinations <- function(guideSet)
         scale_y_continuous(breaks = .custom_breaks) +
         xlab('Position on alignment') + ylab('On-targets (#)') +
         theme(plot.margin = unit(c(0, 0, 0, 0), "cm"),
-              axis.text.x = element_text(angle = 90, hjust = 1),
+              axis.text.x = element_text(angle = 90, vjust = 0.5),
               legend.position = 'none')
               # strip.background = element_blank(),
               # strip.text.x = element_blank())
@@ -842,14 +848,11 @@ plotCombinations <- function(guideSet)
                            
   liste <- list()
   liste[['fig']] <- p_target_cov
-  if (n_fams < 4)
-  {
-    i <- 1
-    while(i < 4)
-    { 
-      liste[[as.character(i)]] <- .plotEmpty('', border = FALSE)
-      i <- i + 1
-    }
+  i <- n_fams
+  while(i < 3)
+  { 
+    liste[[as.character(i)]] <- .plotEmpty('', border = FALSE)
+    i <- i + 1
   }
   p4 <- cowplot::plot_grid(plotlist = liste, labels = 'g', nrow = 1)                          
   p5 <- cowplot::plot_grid(p_cons_cov,
