@@ -23,8 +23,6 @@ Repguide requires the genome assembly of your organism of choice stored as a _BS
 
 Since we are designing guideRNAs against LTRs of the human genome, we will first install the UCSC hg38 assembly.
 ```{r, eval = FALSE}
-if (!requireNamespace("BiocManager", quietly = TRUE))
-    install.packages("BiocManager")
 BiocManager::install("BSgenome.Hsapiens.UCSC.hg38")
 ```
 __Important__ __note__: Do not use __repeat-masked__ _BSgenome_ objects (contain 'masked' suffix, e.g. _BSgenome.Hsapiens.UCSC.hg38.masked_)!

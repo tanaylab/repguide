@@ -1,0 +1,7 @@
+^\.publish_html/*$
+^vignettes$
+^inst/bowtie_indeces$
+^data-raw$
+^man/figures$
+^docs$
+^literature$
