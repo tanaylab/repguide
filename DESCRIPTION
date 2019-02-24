@@ -30,6 +30,7 @@ Imports:
   matrixStats,
   plyr,
   purrr,
+  qlcMatrix,
   Rbowtie,
   rtracklayer,
   R.utils,
