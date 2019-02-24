@@ -71,6 +71,7 @@ essentials_path <- system.file(package = 'Repguide',
 gs <- createGuideSet(genome = Hsapiens,           # Hsapiens is the short version of BSgenome.Hsapiens.UCSC.hg38
                      tes = repeats_path,          # TE annotation
                      cis = tss_path,              # TSS and/or enhancer annotation 
+                     temp = tempdir(),            # Directory for temporary files
                      blacklist = essentials_path) # Regions to blacklist
 gs                     
 ```

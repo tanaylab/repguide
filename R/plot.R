@@ -186,7 +186,7 @@ plotMSA <- function(guideSet,
     
     kmers_dt <- as.data.table(kmers, sorted = FALSE)
     setkey(kmers_dt, 'kmer_id', 'te_id')
-    kmer_hit_score <- kmers_dt[, .(Son = max(Son),
+    kmer_hit_score <- kmers_dt[, .(Son = sum(Son),
                                    kmer_clust = kmer_clust[1],
                                    te_clust = te_clust[1]),
                                    by = c('kmer_id', 'te_id')]
@@ -197,15 +197,17 @@ plotMSA <- function(guideSet,
                    # ][order(te_clust)
                    # ][, te_id := forcats::fct_inorder(as.character(te_id))
                    # ][, Slocus := cut(Son, breaks = c(0, 0.25, 0.5, 1), include.lowest = TRUE)]
-    
-    
+      
     ggdata <- # mildly slow
       kmer_hit_score %>%
       arrange(kmer_clust) %>% 
       mutate(kmer_id = forcats::fct_inorder(as.character(kmer_id))) %>% 
       arrange(te_clust) %>% 
       mutate(te_id = forcats::fct_inorder(as.character(te_id))) %>%
-      mutate(Slocus = cut(Son, breaks = c(0, 0.25, 0.5, 1), include.lowest = TRUE))
+      mutate(Slocus = cut(Son, 
+                          breaks = c(0, 0.25, 0.5, 1, 2, 4, Inf), 
+                          labels = c('(0, 0.25]', '(0.25, 0.5]', '(0.5, 1]', '(1, 2]', '(2, 4]', '>4'),
+                          include.lowest = TRUE))
       
     # Plotting
     row_clust_lines <- c(0, ggdata %>% count(kmer_id, kmer_clust) %>% count(kmer_clust) %>% pull(n) %>% cumsum)
@@ -220,7 +222,7 @@ plotMSA <- function(guideSet,
       ggdata %>% 
       ggplot(aes(te_id, kmer_id, fill = Slocus)) +
         geom_raster() + 
-        scale_fill_manual(values = c('orange', 'darkred', 'purple'), drop = FALSE) +
+        scale_fill_manual(values = colorRampPalette(c("#FFF7EC", "#FEE8C8", "#FDD49E", "#FDBB84", "#FC8D59", "#EF6548", "#D7301F", "#B30000", "#7F0000"))(6)) +
         #scale_fill_gradient2(low = 'blue', mid = 'lightgrey', high = 'red', midpoint = 0)
         annotate('segment', x = 0, xend = n_loci, y = row_clust_lines, yend = row_clust_lines, lwd = 0.1) +
         geom_vline(xintercept = col_clust_lines, lwd = 0.1) +
@@ -239,7 +241,7 @@ plotMSA <- function(guideSet,
               axis.ticks.y = element_blank(),
               panel.grid.major = element_blank()) +
               #plot.margin = unit(c(0, 0, 0, 0), "cm")) +
-        ggplot2::guides(fill = guide_legend(nrow = 1))
+        ggplot2::guides(fill = guide_legend(nrow = 1, title = 'Sbind (sum)'))
   } else {
     p_heatmap = .plotEmpty('No clustering provided')
   }
@@ -637,9 +639,9 @@ plotCombinations <- function(guideSet)
   n_guides     <- length(levels(kmers$n_guides))
   ncols        <- max(n_fams, n_guides)
   n_guides_col <- colorRampPalette(c("#F7FCFD", "#E0ECF4", "#BFD3E6", "#9EBCDA", "#8C96C6", "#8C6BB1", "#88419D", "#810F7C", "#4D004B"))(n_guides)
-  sbind_breaks <- c(0, 0.25, 0.5, 1.5, 2, 4, Inf)
-  sbind_labels <- c('(0, 0.25]', '(0.25, 0.5]', '[1, 1.5]', '(1.5, 2]', '(2, 4]', '>4')
-  sbind_col    <- colorRampPalette(c(RColorBrewer::brewer.pal(9, 'OrRd')))(6)
+  sbind_breaks <- c(0, 0.25, 0.5, 1, 2, 4, Inf)
+  sbind_labels <- c('(0, 0.25]', '(0.25, 0.5]', '(0.5, 1]', '(1, 2]', '(2, 4]', '>4')
+  sbind_col    <- colorRampPalette(c("#FFF7EC", "#FEE8C8", "#FDD49E", "#FDBB84", "#FC8D59", "#EF6548", "#D7301F", "#B30000", "#7F0000"))(6)
   
   p_table <-
     combinations %>%
@@ -686,7 +688,7 @@ plotCombinations <- function(guideSet)
         geom_point(size = 0.5) +
         scale_x_continuous(breaks = c(1, max(combinations$iterations, na.rm = TRUE))) +
         #scale_y_continuous(breaks = .custom_breaks_y) +
-        scale_color_manual(values = n_guides_col) +
+        scale_color_manual(values = n_guides_col[-1]) +
         xlab('Iterations (#)') + ylab('On-score') +
         theme(legend.position = 'none')
     p_greedy_iterations_off <-
@@ -697,7 +699,7 @@ plotCombinations <- function(guideSet)
         geom_point(size = 0.5) +
         scale_x_continuous(breaks = c(1, max(combinations$iterations, na.rm = TRUE))) +
         #scale_y_continuous(breaks = .custom_breaks_y) +
-        scale_color_manual(values = n_guides_col) +
+        scale_color_manual(values = n_guides_col[-1]) +
         xlab('Iterations (#)') + ylab('Off-score') +
         theme(legend.position = 'none')
   } else { 
@@ -729,7 +731,7 @@ plotCombinations <- function(guideSet)
             legend.position = 'right',
             legend.key.width = unit(.3,"cm"),
             legend.key.height = unit(.3,"cm")) +
-      ggplot2::guides(fill = guide_legend(title = 'Sbind', ncol = 1))
+      ggplot2::guides(fill = guide_legend(title = 'Sbind (sum)', ncol = 1))
   
   # Plot off-target dist histogram
   ggdata <- 
@@ -771,7 +773,7 @@ plotCombinations <- function(guideSet)
             legend.position = 'right',
             legend.key.width = unit(.3,"cm"),
             legend.key.height = unit(.3,"cm")) +
-      ggplot2::guides(fill = guide_legend(title = 'Sbind', ncol = 1))
+      ggplot2::guides(fill = guide_legend(title = 'Sbind (sum)', ncol = 1))
 
   # p_cis_hist <-   
     # kmers %>%
