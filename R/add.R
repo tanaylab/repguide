@@ -69,11 +69,12 @@ addAlignments <- function(guideSet,
         return(msa_wo_gaps)
       }))
     names(alignments_import) <- files$repname
-    guideSet@alignments <- c(alignments_comp, alignments_import)  
+    guideSet@alignments <- c(alignments_comp, alignments_import)
   } else { 
     guideSet@alignments <- alignments_comp
   }
-   
+  guideSet@alignments <- guideSet@alignments[order(names(guideSet@alignments))]
+     
   # Compute consensus seqs
   guideSet@consensus <-   
     unlist(DNAStringSetList(sapply(guideSet@alignments, 

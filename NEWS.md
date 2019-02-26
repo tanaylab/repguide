@@ -3,7 +3,7 @@
 ## Bug Fixes
 
 * Added prefix to unique_id column to distinguish TE and genomic bin ids.
-* Fixed `plotTargets` panel f arrangement to match that panels d and e.
+* Fixed `plotTargets` panel __f__ arrangement to match that of panels __d__ and __e__.
 
 # Repguide 0.0.1.0
 

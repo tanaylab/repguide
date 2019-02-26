@@ -23,6 +23,9 @@ navbar:
     - text: "Reference"
       href: reference/index.html
       icon: fa-th-list
+    - text: "News"
+      icon: fa-news
+      href: news/index.html
   right:
     - text: "Bitbucket"
       icon: fa-bitbucket-square
