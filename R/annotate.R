@@ -39,7 +39,7 @@
   hits_te         <- select(hits_te, -subjectHits)
   kmers_unique    <- full_join(as_tibble(kmers_unique), hits_te, by = 'queryHits') %>% 
                      select(-queryHits) %>%
-                     mutate(unique_id = ifelse(is.na(te_id), genomic_bin, te_id),
+                     mutate(unique_id = ifelse(is.na(te_id), paste0('g', genomic_bin), paste0('t', te_id)),
                             on_target = as.numeric(te_id %in% guideSet@targets$te_id),
                             on_target = ifelse(on_target <= 0, -1, on_target))
   

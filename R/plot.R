@@ -699,7 +699,7 @@ plotCombinations <- function(guideSet)
         geom_point(size = 0.5) +
         scale_x_continuous(breaks = c(1, max(combinations$iterations, na.rm = TRUE))) +
         #scale_y_continuous(breaks = .custom_breaks_y) +
-        scale_color_manual(values = n_guides_col[-1]) +
+        scale_color_manual(values = n_guides_col) +
         xlab('Iterations (#)') + ylab('Off-score') +
         theme(legend.position = 'none')
   } else { 

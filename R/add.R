@@ -304,7 +304,7 @@ addTargets <- function(
   targets$seq <- getSeq(guideSet@genome, targets)
   
   guideSet@targets <- targets
-  guideSet@families <- unique(guideSet@targets$repname)
+  guideSet@families <- sort(unique(guideSet@targets$repname))
   
   if (length(guideSet@families) > 8) { warning ('Large number of families provided as targets. Think of reducing number!') }
   guideSet@calls$targets <- match.call()
