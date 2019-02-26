@@ -106,14 +106,13 @@ setMethod("export", signature('guideSet'), function(guideSet,
 {
   combinations_subs <- guideSet@combinations %>% filter(best) %>% unnest
   kmers <- as_tibble(guideSet@kmers)
-  kmers_subs <- right_join(kmers, combinations_subs) 
+  kmers_subs <- inner_join(kmers, combinations_subs, by = 'kmer_id') 
   n_guides <- paste0(unique(kmers_subs$n_guides), '_guides')
-  
-  
+    
   kmers_by_nguides <- 
     kmers_subs %>%
     group_by(n_guides) %>% 
-    do(data.frame = as.tibble(.))
+    do(data.frame = as_tibble(.))
     
   kmer_seqs_by_nguides <-
     kmers_subs %>%
