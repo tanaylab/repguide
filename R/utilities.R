@@ -203,9 +203,8 @@ binGenome <- function(genome, bin_width = 250)
   kmers_filt <-
     kmers_all %>%
     filter(grepl('[A,T,G,C]GG$', V1)) %>% # NGG PAM
-    as_tibble %>%
-    pull(V1)
-  
+    as_tibble
+    
   # filter five prime seq
   if (!is.null(five_prime_seq))
   {
@@ -216,6 +215,9 @@ binGenome <- function(genome, bin_width = 250)
     
     if (nrow(kmers_filt) == 0) { stop ('No guides fulfill five_prime_seq requirement, please modify') }
   }
+  
+  kmers_filt <- kmers_filt$V1
+  
   guideSet@kmers <- GRanges(seqnames = 1:length(kmers_filt), 
                             ranges = 1:length(kmers_filt), 
                             guide_seq = kmers_filt)
