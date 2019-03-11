@@ -152,6 +152,7 @@ addCombinations <- function(guideSet,
 #' @param n_clust Single positive integer <= 20. Number of groups to cluster guideRNAs into. Higher n_clust usually gives better results but comes with a speed penalty when computing guide combinations. Passed to \code{clustGuides()}.
 #' @param consensus_range Data.frame with repname, start, and end columns. Scores guideRNA target binding sites outside of provided consensus range neutrally. Passed to \code{selGuides()} 
 #' @param alpha Numeric. Off-target score coefficient. Large \code{alpha} penalizes guides with high off-target score while \code{alpha = 0} ignores off-targets and picks guides with highest on-target binding.
+#' @param five_prime_seq Character. Sequence requirement for 5' start of guideRNAs, e.g. G nucleotide for transcription from U6 promoter.
 #' @param PAM Character. Currently only 'NGG' PAM is supported.
 #' @param lower_count Numeric. Passed to jellyfish kmer counting. Only kmers occuring at least \code{lower_count} times are considered for bowtie mapping.
 #' @param force Logical. If \code{TRUE}, overwrite existing guides.
@@ -176,6 +177,7 @@ addGuides <- function(guideSet,
                       consensus_range = NULL,
                       alpha = 100,
                       n_clust = 11,
+                      five_prime_seq = NULL,
                       PAM = 'NGG',
                       lower_count = 5,
                       force = FALSE)
@@ -204,7 +206,7 @@ addGuides <- function(guideSet,
   # Add results to guideSet
   if (is.null(guides)) 
   { 
-    guideSet <- .jellyfish(guideSet, lower_count) 
+    guideSet <- .jellyfish(guideSet, lower_count, five_prime_seq) 
   } else { 
     guideSet@kmers <- GRanges(seqnames = 1:length(guides), ranges = 1:length(guides), guide_seq = guides)
   }

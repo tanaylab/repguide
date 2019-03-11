@@ -12,7 +12,7 @@
 
 <meta name="author" content="David Brocks" />
 
-<meta name="date" content="2019-02-23" />
+<meta name="date" content="2019-03-10" />
 
 <title>guideRNA scoring</title>
 
@@ -214,7 +214,7 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 
 <h1 class="title toc-ignore">guideRNA scoring</h1>
 <h4 class="author"><em>David Brocks</em></h4>
-<h4 class="date"><em>2019-02-23</em></h4>
+<h4 class="date"><em>2019-03-10</em></h4>
 
 
 
@@ -231,7 +231,7 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 <div id="per-genomic-binding-site" class="section level4">
 <h4>Per genomic binding site</h4>
 <p>The final off-target score for a predicted off-target binding site is defined as the product of both scores: <span class="math display">\[ S_{off} = S_{bind}\times S_{cis} \]</span> while the on target score of an on-target binding site is simply defined as: <span class="math display">\[ S_{on} = S_{bind} \]</span></p>
-<p>We then summarise the on- and off-target scores for a guide (<em>Sguide_off</em> and <em>Sguide_on</em>) over all predicted off- and on-target binding sites (Soff and Son) by first calculating the maximal score of a locus <em>l</em> and guide <em>g</em>: <span class="math display">\[ Slocus_{on}(l,g) = \max_{b\in B_{l}} S_{on} \]</span> <span class="math display">\[ Slocus_{off}(l,g) = \max_{b\in B_{l}} S_{off} \]</span> where <em>Bl</em> is the set of all the on/off-target binding sites of locus <em>l</em>. A Locus is defined as either the full-length transposon interval (variable size) or a genomic bin of size 250 bps by default.</p>
+<p>We then summarise the on- and off-target scores for a guide (<em>Sguide_off</em> and <em>Sguide_on</em>) over all predicted off- and on-target binding sites (Soff and Son) by first calculating the maximal score of a locus <em>l</em> and guide <em>g</em>: <span class="math display">\[ Slocus_{on}(l,g) = \max_{b\in B_{l}} S_{on} \]</span> <span class="math display">\[ Slocus_{off}(l,g) = \max_{b\in B_{l}} S_{off} \]</span> where <em>Bl</em> is the set of all the on/off-target binding sites of locus <em>l</em>. A Locus is defined as either the full-length transposon interval (variable size) or a genomic bin of size 500 bps by default.</p>
 </div>
 <div id="per-guiderna" class="section level4">
 <h4>Per guideRNA</h4>

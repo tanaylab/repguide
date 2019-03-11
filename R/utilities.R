@@ -28,6 +28,9 @@
                   force = TRUE)
                   
   kmers_mapped <- importKmers(align_file)
+  
+  file.remove(align_file)
+  file.remove(kmers_file)
 
   # Throw binding sites with NGG mismatch
   base_pos <- paste(c(guide_length + 1, guide_length + 2) , collapse = '|')
@@ -65,6 +68,7 @@
   
   # --noref don't buildt ebwt 3/4 - paired mapping | lower offrate increases performance for multi mappers
   tmp <- Rbowtie::bowtie_build(references = genome_fasta_fn, outdir = index_dir, prefix = index_id, force = TRUE, noref = TRUE, offrate = 3) 
+  file.remove(genome_fasta_fn)
 }
 
 .keepBSgenomeSequences <- function(genome, seqnames)
@@ -176,7 +180,7 @@ binGenome <- function(genome, bin_width = 250)
 	return(tss)
 }
 
-.jellyfish <- function(guideSet, lower_count = 2)
+.jellyfish <- function(guideSet, lower_count = 2, five_prime_seq = NULL)
 {
   PAM <- guideSet@PAM
   kmer_length <- guideSet@guide_length + nchar(PAM)
@@ -201,7 +205,17 @@ binGenome <- function(genome, bin_width = 250)
     filter(grepl('[A,T,G,C]GG$', V1)) %>% # NGG PAM
     as_tibble %>%
     pull(V1)
+  
+  # filter five prime seq
+  if (!is.null(five_prime_seq))
+  {
+    five_prime_seq <- paste0('^', five_prime_seq)
+    kmers_filt <-
+      kmers_filt %>%
+      filter(grepl(five_prime_seq, V1))  
     
+    if (nrow(kmers_filt) == 0) { stop ('No guides fulfill five_prime_seq requirement, please modify') }
+  }
   guideSet@kmers <- GRanges(seqnames = 1:length(kmers_filt), 
                             ranges = 1:length(kmers_filt), 
                             guide_seq = kmers_filt)
