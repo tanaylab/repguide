@@ -1,4 +1,14 @@
-# Repguide 1.1.1
+# Repguide 0.0.1.2
+
+## Bug Fixes
+
+* Prevents greedy search from adding the same guide multiple times
+
+## Features
+
+* Parameter `five_prime_seq` added to `addGuides` function to restrict analyses to guides starting with certain nucleotide (e.g. G for transcription from U6 promoter)
+
+# Repguide 0.0.1.1
 
 ## Bug Fixes
 
