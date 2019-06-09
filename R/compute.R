@@ -381,17 +381,18 @@ clustGuides <- function(guideSet,
       # Get current best combination and calc stats
       kmers_best <- combinations %>% filter(n_guides == nguides & best) %>% pull(kmer_id) %>% as.character()
       #kmers_best <- sample(rownames(mat), nguides)
-      score_all_best <- qlcMatrix::rowMax(mat[, kmers_best])
-      score_on_best  <- sum(score_all_best[on_indeces])
-      score_off_best <- sum(score_all_best[off_indeces])
+      score_onoff_best <- qlcMatrix::rowMax(mat[, kmers_best])
+      score_on_best  <- sum(score_onoff_best[on_indeces])
+      score_off_best <- sum(score_onoff_best[off_indeces])
       
-      # Run greedy search
+      # create template df
       df <- tibble(iterations = 1:iterations,
                    Son_tot = score_on_best,
                    Soff_tot = score_off_best,
                    n_guides = nguides,
                    kmer_id = list(kmers_best))
-           
+      
+      # Run greedy search     
       for (i in 1:iterations)
       {
         message(nguides, ' guides greedy iteration: ', i)
@@ -403,20 +404,20 @@ clustGuides <- function(guideSet,
         kmers_subs_score <- if (length(kmers_subs) == 1) { mat[, kmers_subs] } else { qlcMatrix::rowMax(mat[, kmers_subs]) }
        
         # Score delta against all kmers
-        score_delta <- mat - kmers_subs_score
+        score_delta <- mat[, !colnames(mat) %in% kmers_subs] - kmers_subs_score
         attr(score_delta, 'x')[attr(score_delta, 'x') < 0] <- 0
         
         # Find and add best other kmer
         score_on_delta  <- Matrix::colSums(score_delta[on_indeces, ])
         score_off_delta <- Matrix::colSums(score_delta[off_indeces, ])
         
-        kmers_new <- c(kmers_subs, colnames(mat)[which.max(score_on_delta - score_off_delta * alpha)])
+        kmers_new <- c(kmers_subs, names(sort(score_on_delta - score_off_delta * alpha, decreasing = TRUE)[1])) # add best kmer
         #kmers_new <- c(kmers_subs, colnames(mat)[which.max(score_on_delta)])
         
         # Score new subset
-        score_all_new <- qlcMatrix::rowMax(mat[, kmers_new])
-        score_on_new  <- sum(score_all_new[on_indeces])
-        score_off_new <- sum(score_all_new[off_indeces])
+        score_onoff_new <- qlcMatrix::rowMax(mat[, kmers_new])
+        score_on_new  <- sum(score_onoff_new[on_indeces])
+        score_off_new <- sum(score_onoff_new[off_indeces])
             
         # Update kmers if optimized
         if ((score_on_new / score_off_new * alpha) > (score_on_best - score_off_best * alpha))
