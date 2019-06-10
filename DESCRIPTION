@@ -1,6 +1,6 @@
 Package: Repguide
 Title: Design CRISPR guide RNAs against DNA repetitive sequences
-Version: 0.0.1.1
+Version: 0.0.1.2
 Authors@R: person("David", "Brocks", email = "davidbrocks87@gmail.com", role = c("aut", "cre"))
 Description: The Repguide R package facilitates the design of guideRNAs for CRISPR/dCas9 targeting of repetitive DNA sequences, such as those derived from transposable elements..
 URL: https://bitbucket.org/tanaylab/repguide
