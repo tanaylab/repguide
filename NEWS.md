@@ -1,3 +1,9 @@
+# Repguide 0.0.1.3
+
+## Bug Fixes
+
+* Export bug fix resolving mismatch between number of guides in file name and internal number of sequences 
+
 # Repguide 0.0.1.2
 
 ## Bug Fixes

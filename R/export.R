@@ -107,7 +107,6 @@ setMethod("export", signature('guideSet'), function(guideSet,
   combinations_subs <- guideSet@combinations %>% filter(best) %>% unnest
   kmers <- as_tibble(guideSet@kmers)
   kmers_subs <- inner_join(kmers, combinations_subs, by = 'kmer_id') 
-  n_guides <- paste0(unique(kmers_subs$n_guides), '_guides')
     
   kmers_by_nguides <- 
     kmers_subs %>%
@@ -119,9 +118,11 @@ setMethod("export", signature('guideSet'), function(guideSet,
     group_by(n_guides) %>%
     do(guide_seq = unique(DNAStringSet(structure(.$guide_seq, names = as.character(.$kmer_id)), use.names = TRUE)))
   
-  for (i in 1:length(n_guides))
+  for (i in kmers_by_nguides$n_guides)
   {
-    fwrite(kmers_by_nguides$data.frame[[i]], file = paste0(n_guides[i], '_binding.txt'), sep ='\t')
-    Biostrings::writeXStringSet(kmer_seqs_by_nguides$guide_seq[[i]], filepath = paste0(n_guides[i], '_sequence.fasta'), format = 'fasta')  
+    data.table::fwrite(kmers_by_nguides$data.frame[[i]], 
+                       file = paste0(i, '_guides_binding.txt'), sep ='\t')
+    Biostrings::writeXStringSet(kmer_seqs_by_nguides$guide_seq[[i]], 
+                                filepath = paste0(i, '_guides_sequence.fasta'), format = 'fasta')  
   }
 }
