@@ -102,7 +102,7 @@ selGuides <- function(guideSet,
   
   if (type == 'combination')
   {
-    stats <- guideSet@combinations %>% rename(grouping_var = n_guides, id = combi_id)
+    stats <- guideSet@combinations %>% dplyr::rename(grouping_var = n_guides, id = combi_id)
     ids_best <-
         stats %>%
         group_by(grouping_var) %>%
