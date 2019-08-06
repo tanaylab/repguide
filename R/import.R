@@ -33,7 +33,7 @@ importKmers <- function(filepath = 'path to bowtie mapped kmers')
 {
   # Import
   kmers <- 
-    fread(filepath) %>% 
+    fread(filepath)[order(V1), ] %>% 
     as_tibble %>%
     dplyr::rename(kmer_id = V1, strand = V2, chrom = V3, start = V4, seq = V5, n_mappings = V6, mismatches = V7) %>%
     mutate(start = start + 1, # adjust for difference between 0-based bowtie and 1-based GRanges

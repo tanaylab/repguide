@@ -3,12 +3,12 @@
 .bowtie <- function(guideSet,
                     n_mismatches = 0)
 {
-  genome <- guideSet@genome
-  index_dir <- guideSet@refdir
-  n_cores <- guideSet@.n_cores
+  genome       <- guideSet@genome
+  index_dir    <- guideSet@refdir
+  n_cores      <- guideSet@.n_cores
   guide_length <- guideSet@guide_length
-  kmers_file <- tempfile(tmpdir = guideSet@temp)
-  align_file <- tempfile(tmpdir = guideSet@temp)
+  kmers_file   <- tempfile(tmpdir = guideSet@temp)
+  align_file   <- tempfile(tmpdir = guideSet@temp)
   
   kmers <- guideSet@kmers$guide_seq
   data.table::fwrite(list(kmers), kmers_file)
@@ -33,7 +33,7 @@
   file.remove(kmers_file)
 
   # Throw binding sites with NGG mismatch
-  base_pos <- paste(c(guide_length + 1, guide_length + 2) , collapse = '|')
+  base_pos     <- paste(c(guide_length + 1, guide_length + 2) , collapse = '|')
   kmers_mapped <- kmers_mapped[!stringr::str_detect(kmers_mapped$mismatches, base_pos)] # 0-based!
   
   # delete 'N' from NGG mismatches
@@ -44,10 +44,9 @@
   kmers_mapped$n_mismatches <- stringr::str_count(kmers_mapped$mismatches, stringr::fixed(':'))
   
   kmers_mapped$guide_seq <- # add guide mother seq
-    left_join(as_tibble(kmers_mapped), 
-              tibble(guide_seq = substring(kmers, 1, guide_length), kmer_id = 0:(length(kmers) -1)), 
-              by = 'kmer_id') %>%
-    pull(guide_seq)
+    merge(as.data.table(kmers_mapped), 
+              data.table(guide_seq = substring(kmers, 1, guide_length), kmer_id = 0:(length(kmers) -1)), 
+              by = 'kmer_id', all.x = TRUE)$guide_seq
     
   guideSet@kmers <- kmers_mapped
               
@@ -182,9 +181,10 @@ binGenome <- function(genome, bin_width = 250)
 
 .jellyfish <- function(guideSet, lower_count = 2, five_prime_seq = NULL)
 {
-  PAM <- guideSet@PAM
-  kmer_length <- guideSet@guide_length + nchar(PAM)
-  n_cores <- guideSet@.n_cores
+  PAM                <- guideSet@PAM
+  guide_length       <- guideSet@guide_length
+  guide_length_w_PAM <- guide_length + nchar(PAM)
+  n_cores            <- guideSet@.n_cores
   print ('Computing kmer universe')
   
   seq_file <- tempfile(tmpdir = guideSet@temp)
@@ -195,7 +195,7 @@ binGenome <- function(genome, bin_width = 250)
   
   jellyfish_path <- system.file(package = 'Repguide', 'bin', ifelse(Sys.info()['sysname'] == 'Linux', 'jellyfish-linux', 'jellyfish-macosx'))
   
-  cmd <- glue::glue("{jellyfish_path} count --mer-len {kmer_length} --size 100M --threads {n_cores} --out-counter-len 0 --lower-count {lower_count} --text {seq_file} --output {kmers_file} ")
+  cmd <- glue::glue("{jellyfish_path} count --mer-len {guide_length_w_PAM} --size 100M --threads {n_cores} --out-counter-len 0 --lower-count {lower_count} --text {seq_file} --output {kmers_file} ")
   system(command = cmd)
   
   kmers_all <- data.table::fread(kmers_file, skip = 1)
@@ -217,6 +217,9 @@ binGenome <- function(genome, bin_width = 250)
   }
   
   kmers_filt <- kmers_filt$V1
+  
+  # throw duplicated kmers that are identical up to PAM sequence (may throw an superior guide when 0 mismatches are selected)
+  kmers_filt <- kmers_filt[!duplicated(substring(kmers_filt, 1, guide_length))]
   
   guideSet@kmers <- GRanges(seqnames = 1:length(kmers_filt), 
                             ranges = 1:length(kmers_filt), 
