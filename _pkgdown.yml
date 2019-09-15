@@ -26,10 +26,6 @@ navbar:
     - text: "News"
       icon: fa-news
       href: news/index.html
-  right:
-    - text: "Bitbucket"
-      icon: fa-bitbucket-square
-      href: https://bitbucket.org/tanaylab/repguide/src/default/
 
 reference:
   - title: "Pipeline"
