@@ -132,11 +132,11 @@
 <h3 class="hasAnchor">
 <a href="#installation" class="anchor"></a>Installation</h3>
 <div class="sourceCode" id="cb1"><pre class="r"><span class="co"># Install BiocManager (in case you haven't already)</span>
-<span class="kw">if</span> (!<span class="fu"><a href="https://rdrr.io/r/base/ns-load.html">requireNamespace</a></span>(<span class="st">"BiocManager"</span>, <span class="kw">quietly</span> <span class="kw">=</span> <span class="fl">TRUE</span>))
-    <span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html">install.packages</a></span>(<span class="st">"BiocManager"</span>)
+<span class="kw">if</span> (!<span class="fu"><a href="https://rdrr.io/r/base/ns-load.html">requireNamespace</a></span>(<span class="st">"remotes"</span>, <span class="kw">quietly</span> <span class="kw">=</span> <span class="fl">TRUE</span>))
+    <span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html">install.packages</a></span>(<span class="st">"remotes"</span>)
 
 <span class="co"># Install Repguide</span>
-<span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html">install.packages</a></span>(<span class="st">'Repguide'</span>, <span class="kw">repos</span> <span class="kw">=</span> <span class="st">'tanaylab.github.io/repo'</span>)</pre></div>
+<span class="kw pkg">remotes</span><span class="kw ns">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html">install_github</a></span>(<span class="kw">repo</span> <span class="kw">=</span> <span class="st">'tanaylab/repguide'</span>)</pre></div>
 <p><strong>Note</strong>: Repguide requires R version 3.5 or higher. The package was tested on linux and macbook machines, but is currently not compatible on Windows. A typical application will require at least 4 GB RAM, but heavier use cases (e.g. large guideRNA universe) may require 8 GB RAM or more. For improved speed performance, we recommend a multi-CPU/core workstation.</p>
 </div>
 </div>
