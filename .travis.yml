@@ -11,6 +11,6 @@ before_deploy:
   - Rscript -e 'BiocManager::install("BSgenome.Hsapiens.UCSC.hg38")'
 deploy:
   provider: script
-  script: Rscript -e 'pkgdown::deploy_site_github(document = FALSE, examples = FALSE)'
+  script: Rscript -e 'pkgdown::deploy_site_github(document = FALSE, lazy = TRUE, examples = FALSE)'
   skip_cleanup: true
 
