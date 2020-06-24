@@ -34,7 +34,7 @@ knitr::include_graphics('man/figures/schematic.png')
  * Combinatorial optimization (multiple guides)
  * High-quality reports
  
-More details on the usage of Repguide is available in the package [vignette](https://tanaylab.bitbucket.io/Repguide/articles/Repguide.html). 
+More details on the usage of Repguide is available in the package [vignette](https://tanaylab.github.io/Repguide/index.html). 
 
 ### Installation
 
@@ -44,7 +44,7 @@ if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 
 # Install Repguide
-install.packages('Repguide', repos = 'tanaylab.bitbucket.io/repo')
+install.packages('Repguide', repos = 'tanaylab.github.io/repo')
 ```
 
 **Note**: Repguide requires R version 3.5 or higher. The package was tested on linux and macbook machines, but is currently not compatible on Windows. A typical application will require at least 4 GB RAM, but heavier use cases (e.g. large guideRNA universe) may require 8 GB RAM or more. For improved speed performance, we recommend a multi-CPU/core workstation.

@@ -28,7 +28,7 @@ coverage.
   - High-quality reports
 
 More details on the usage of Repguide is available in the package
-[vignette](https://tanaylab.bitbucket.io/Repguide/articles/Repguide.html).
+[vignette](https://tanaylab.github.io/Repguide/index.html).
 
 ### Installation
 
@@ -38,7 +38,7 @@ if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 
 # Install Repguide
-install.packages('Repguide', repos = 'tanaylab.bitbucket.io/repo')
+install.packages('Repguide', repos = 'tanaylab.github.io/repo')
 ```
 
 **Note**: Repguide requires R version 3.5 or higher. The package was
