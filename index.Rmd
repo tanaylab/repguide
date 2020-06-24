@@ -34,7 +34,7 @@ knitr::include_graphics('man/figures/schematic.png')
  * Combinatorial optimization (multiple guides)
  * High-quality reports
  
-More details on the usage of Repguide is available in the package [vignette](https://tanaylab.bitbucket.io/Repguide/articles/Repguide.html). 
+More details on the usage of Repguide is available in the package [vignette](https://tanaylab.github.io/Repguide/index.html). 
 
 ### Installation
 

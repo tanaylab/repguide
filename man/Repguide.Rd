@@ -3,8 +3,4 @@
 \docType{package}
 \name{Repguide}
 \alias{Repguide}
-\alias{Repguide-package}
 \title{Repguide}
-\description{
-Repguide
-}

@@ -4,8 +4,14 @@
 \alias{addAlignments}
 \title{Add multiple sequence alignment to guideSet object}
 \usage{
-addAlignments(guideSet, files = NULL, max_gap_freq = 0.8,
-  iterations = 2, refinements = 1, force = FALSE)
+addAlignments(
+  guideSet,
+  files = NULL,
+  max_gap_freq = 0.8,
+  iterations = 2,
+  refinements = 1,
+  force = FALSE
+)
 }
 \arguments{
 \item{files}{data.frame. Imports multiple sequence alignments from file for provided families. For other families, the alignment is computed. Requires columns 'repname' and 'path' storing family identifiers and paths to the multiple sequence alignment, respectively.}

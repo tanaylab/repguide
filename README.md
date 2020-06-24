@@ -34,11 +34,11 @@ More details on the usage of Repguide is available in the package
 
 ``` r
 # Install BiocManager (in case you haven't already)
-if (!requireNamespace("BiocManager", quietly = TRUE))
-    install.packages("BiocManager")
+if (!requireNamespace("remotes", quietly = TRUE))
+    install.packages("remotes")
 
 # Install Repguide
-install.packages('Repguide', repos = 'tanaylab.github.io/repo')
+remotes::install_github(repo = 'tanaylab/repguide')
 ```
 
 **Note**: Repguide requires R version 3.5 or higher. The package was

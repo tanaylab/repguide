@@ -41,7 +41,7 @@ Imports:
   stringdist,
   tibble,
   tidyr
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.0
 Roxygen: list(markdown = TRUE)
 Suggests: 
     doMC,

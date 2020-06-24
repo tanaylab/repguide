@@ -44,11 +44,11 @@ More details on the usage of Repguide is available in the package [vignette](htt
 
 ```{r, eval=FALSE}
 # Install BiocManager (in case you haven't already)
-if (!requireNamespace("BiocManager", quietly = TRUE))
-    install.packages("BiocManager")
+if (!requireNamespace("remotes", quietly = TRUE))
+    install.packages("remotes")
 
 # Install Repguide
-install.packages('Repguide', repos = 'tanaylab.github.io/repo')
+remotes::install_github(repo = 'tanaylab/repguide')
 ```
 
 **Note**: Repguide requires R version 3.5 or higher. The package was tested on linux and macbook machines, but is currently not compatible on Windows. A typical application will require at least 4 GB RAM, but heavier use cases (e.g. large guideRNA universe) may require 8 GB RAM or more. For improved speed performance, we recommend a multi-CPU/core workstation.

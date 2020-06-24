@@ -3,7 +3,9 @@
 \name{essential_genes}
 \alias{essential_genes}
 \title{Essential human gene promoter coordinates}
-\format{bed file with 13944 genomic intervals (each 2 kb in size).}
+\format{
+bed file with 13944 genomic intervals (each 2 kb in size).
+}
 \source{
 \href{https://www.gencodegenes.org/human/}{Gencode v28 annotation}, and essential genes \href{http://tko.ccbr.utoronto.ca/Data/core-essential-genes-sym_HGNCID}{Hart et al., 2015}
 }

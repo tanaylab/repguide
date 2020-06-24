@@ -4,8 +4,13 @@
 \alias{selGuides}
 \title{Blacklist guideRNAs}
 \usage{
-selGuides(guideSet, min_Son = NULL, max_Soff = NULL,
-  consensus_range = NULL, gc_content = c(0.4, 0.8))
+selGuides(
+  guideSet,
+  min_Son = NULL,
+  max_Soff = NULL,
+  consensus_range = NULL,
+  gc_content = c(0.4, 0.8)
+)
 }
 \arguments{
 \item{min_Son}{Numeric. Guides below \code{min_Son} are blacklisted. If \code{NULL} (the default), \code{min_Son} is calculated based on the target score distribution (75th percentile).}

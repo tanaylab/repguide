@@ -4,11 +4,23 @@
 \alias{addGuides}
 \title{Add guideRNAs to guideSet object}
 \usage{
-addGuides(guideSet, guides = NULL, n_mismatches = 0,
-  blacklist_penalty = 10, guide_length = 19, gc_content = c(0.4,
-  0.8), min_Son = NULL, max_Soff = NULL, consensus_range = NULL,
-  alpha = 100, n_clust = 11, five_prime_seq = NULL, PAM = "NGG",
-  lower_count = 5, force = FALSE)
+addGuides(
+  guideSet,
+  guides = NULL,
+  n_mismatches = 0,
+  blacklist_penalty = 10,
+  guide_length = 19,
+  gc_content = c(0.4, 0.8),
+  min_Son = NULL,
+  max_Soff = NULL,
+  consensus_range = NULL,
+  alpha = 100,
+  n_clust = 11,
+  five_prime_seq = NULL,
+  PAM = "NGG",
+  lower_count = 5,
+  force = FALSE
+)
 }
 \arguments{
 \item{guides}{Character. Optional vector of pre-computed guideRNA sequences to map and annotate. Will restrict downstream analysis to \code{guides} rather than computing all possible guides de novo.}

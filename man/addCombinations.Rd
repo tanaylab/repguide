@@ -4,8 +4,14 @@
 \alias{addCombinations}
 \title{Add guideRNA combinations to guideSet object.}
 \usage{
-addCombinations(guideSet, max_guides = 5, greedy = TRUE,
-  iterations = 10, alpha = 100, force = FALSE)
+addCombinations(
+  guideSet,
+  max_guides = 5,
+  greedy = TRUE,
+  iterations = 10,
+  alpha = 100,
+  force = FALSE
+)
 }
 \arguments{
 \item{max_guides}{Numeric. Maximum number of distinct guides to consider when calculating combinations. Do not use a higher number than experimentally feasible.}
