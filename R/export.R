@@ -118,12 +118,9 @@ setMethod("export", signature('guideSet'), function(guideSet,
     group_by(n_guides) %>%
     do(guide_seq = unique(DNAStringSet(structure(.$guide_seq, names = as.character(.$kmer_id)), use.names = TRUE)))
   
-  # add names to nested data.frame corresponding to number of guides
-  names(kmers_by_nguides$data.frame) <- kmers_by_nguides$n_guides
-  
   for (i in kmers_by_nguides$n_guides)
   {
-    data.table::fwrite(kmers_by_nguides$data.frame[[as.character(i)]], 
+    data.table::fwrite(kmers_by_nguides$data.frame[[i]], 
                        file = paste0(i, '_guides_binding.txt'), sep ='\t')
     Biostrings::writeXStringSet(kmer_seqs_by_nguides$guide_seq[[i]], 
                                 filepath = paste0(i, '_guides_sequence.fasta'), format = 'fasta')  

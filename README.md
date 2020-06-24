@@ -1,11 +1,5 @@
 
-<!-- badges: start -->
-
-[![Travis build
-status](https://travis-ci.com/tanaylab/repguide.svg?branch=master)](https://travis-ci.org/tanaylab/repguide)
-<!-- badges: end -->
-
-# Repguide <img src="logo.png" align="right" alt="" width="120" />
+# Repguide <img src="man/figures/logo.png" align="right" alt="" width="120" />
 
 The Repguide R package is a *beta* development version to facilitate the
 design of guideRNAs for CRISPR/dCas9 targeting of repetitive DNA
@@ -15,9 +9,10 @@ sequences, such as those derived from transposable elements.
 
 The basic workflow consists of exploring and selecting target sites,
 computing the guideRNA universe, and finding the optimal combination of
-guides that maximizes target-specific coverage.
+guides that maximizes target-specific
+coverage.
 
-<img src="schematic.png" width="90%" style="display: block; margin: auto;" />
+<img src="man/figures/schematic.png" width="90%" style="display: block; margin: auto;" />
 
 #### Features include:
 
@@ -33,7 +28,7 @@ guides that maximizes target-specific coverage.
   - High-quality reports
 
 More details on the usage of Repguide is available in the package
-[vignette](https://tanaylab.github.io/Repguide/articles/Repguide.html).
+[vignette](https://tanaylab.bitbucket.io/Repguide/articles/Repguide.html).
 
 ### Installation
 
@@ -43,7 +38,7 @@ if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 
 # Install Repguide
-install.packages('Repguide', repos = 'tanaylab.github.io/repo')
+install.packages('Repguide', repos = 'tanaylab.bitbucket.io/repo')
 ```
 
 **Note**: Repguide requires R version 3.5 or higher. The package was

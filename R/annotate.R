@@ -67,7 +67,7 @@
   {
     if (sum(colnames(consensus_range) %in% c('repname', 'start', 'end')) != 3) { stop ('Consensus range requires repname, start, end columns') }
     
-    guideSet@kmers$on_target <- 
+    guideSet@kmers <- 
       guideSet@kmers %>%
       as_tibble %>%
       right_join(consensus_range, 
@@ -75,7 +75,8 @@
                  by = 'repname', suffix = c('_con', '')) %>%
       mutate(outside = con_pos < start_con | con_pos > end_con,
              on_target = ifelse(!is.na(outside) & outside, 0, on_target)) %>%
-      pull(on_target)
+      select(-outside, -start_con, -end_con) %>%
+      makeGRangesFromDataFrame(., keep.extra.columns = TRUE)
   }
 
   # Compute guide scores

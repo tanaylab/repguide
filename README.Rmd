@@ -10,11 +10,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-<!-- badges: start -->
-[![Travis build status](https://travis-ci.com/tanaylab/repguide.svg?branch=master)](https://travis-ci.org/tanaylab/repguide)
-<!-- badges: end -->
-
-# Repguide <img src="logo.png" align="right" alt="" width="120" />
+# Repguide <img src="man/figures/logo.png" align="right" alt="" width="120" />
 
 The Repguide R package is a _beta_ development version to facilitate the design of guideRNAs for CRISPR/dCas9 targeting of repetitive DNA sequences, such as those derived from transposable elements. 
 
@@ -23,7 +19,7 @@ The Repguide R package is a _beta_ development version to facilitate the design 
 The basic workflow consists of exploring and selecting target sites, computing the guideRNA universe, and finding the optimal combination of guides that maximizes target-specific coverage.
  
 ```{r pressure, echo = FALSE, out.width = '90%', fig.align='center'}
-knitr::include_graphics('schematic.png')
+knitr::include_graphics('man/figures/schematic.png')
 ```
 
 #### Features include:
@@ -38,7 +34,7 @@ knitr::include_graphics('schematic.png')
  * Combinatorial optimization (multiple guides)
  * High-quality reports
  
-More details on the usage of Repguide is available in the package [vignette](https://tanaylab.github.io/Repguide/articles/Repguide.html). 
+More details on the usage of Repguide is available in the package [vignette](https://tanaylab.bitbucket.io/Repguide/articles/Repguide.html). 
 
 ### Installation
 
@@ -48,7 +44,7 @@ if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 
 # Install Repguide
-install.packages('Repguide', repos = 'tanaylab.github.io/repo')
+install.packages('Repguide', repos = 'tanaylab.bitbucket.io/repo')
 ```
 
 **Note**: Repguide requires R version 3.5 or higher. The package was tested on linux and macbook machines, but is currently not compatible on Windows. A typical application will require at least 4 GB RAM, but heavier use cases (e.g. large guideRNA universe) may require 8 GB RAM or more. For improved speed performance, we recommend a multi-CPU/core workstation.

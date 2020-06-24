@@ -1,2 +1,10 @@
 inst/doc
+inst/bowtie_indeces
+literature/
+docs/*
 .Rproj.user
+logo.ai
+logo.svg
+Schematic.ai
+.publish_html/
+.hg/

@@ -123,7 +123,7 @@ addCombinations <- function(guideSet,
 {
   if (length(guideSet@kmers) == 0) { stop('Add guides to guideSet using addGuides function before calling addCombinations') }
   if (length(guideSet@combinations) != 0 & !force) { stop('guideSet already contains combinations. Use force = TRUE to overwrite (will remove QC plots)') }
-  if (max_guides > length(unique(gs@kmers$kmer_id[gs@kmers$best]))) { stop ('max_guides cannot exceed number of selected guides') }
+  if (max_guides > length(unique(guideSet@kmers$kmer_id[guideSet@kmers$best]))) { stop ('max_guides cannot exceed number of selected guides') }
   
   # Remove downstream results
   slot(guideSet, name = 'combinations') <- tibble()
@@ -198,17 +198,27 @@ addGuides <- function(guideSet,
   
   # Remove downstream results
   slot(guideSet, name = 'combinations') <- tibble()
-  slot(guideSet, name = 'plots') <- list('targets' = guideSet@plots$targets, 'guides' = list(), 'combinations' = list())
+  slot(guideSet, name = 'plots')        <- list('targets' = guideSet@plots$targets, 'guides' = list(), 'combinations' = list())
  
   guideSet@guide_length <- ifelse (is.null(guides), guide_length, unique(nchar(guides)))
-  guideSet@PAM <- PAM
+  guideSet@PAM          <- PAM
   
   # Add results to guideSet
   if (is.null(guides)) 
   { 
     guideSet <- .jellyfish(guideSet, lower_count, five_prime_seq) 
   } else { 
-    guideSet@kmers <- GRanges(seqnames = 1:length(guides), ranges = 1:length(guides), guide_seq = guides)
+    if (PAM == 'NGG')
+    {
+      guides <- unlist(lapply(guides, function(x) paste0(x, c('AGG'))))
+    } else {
+      warnings ('No valid PAM provided, (off)targets may be incorrect')
+    }
+    
+    guideSet@kmers <- 
+      GRanges(seqnames = 1:length(guides), 
+              ranges = 1:length(guides), 
+              guide_seq = guides)
   }
   guideSet <- .bowtie(guideSet, n_mismatches)
   guideSet <- .annoGuides(guideSet, blacklist_penalty, consensus_range = consensus_range)

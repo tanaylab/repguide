@@ -210,8 +210,8 @@ plotMSA <- function(guideSet,
                           include.lowest = TRUE))
       
     # Plotting
-    row_clust_lines <- c(0, ggdata %>% count(kmer_id, kmer_clust) %>% count(kmer_clust) %>% pull(n) %>% cumsum)
-    col_clust_lines <- c(0, ggdata %>% count(te_id, te_clust) %>% count(te_clust) %>% pull(n) %>% cumsum)
+    row_clust_lines <- c(0, ggdata %>% select(kmer_id, kmer_clust) %>% unique %>% count(kmer_clust) %>% pull(n) %>% cumsum())
+    col_clust_lines <- c(0, ggdata %>% select(te_id, te_clust) %>% unique %>% count(te_clust) %>% pull(n) %>% cumsum())
     
     n_kmers <- length(unique(ggdata$kmer_id))
     n_loci <- length(unique(ggdata$te_id))
@@ -699,7 +699,7 @@ plotCombinations <- function(guideSet)
         geom_point(size = 0.5) +
         scale_x_continuous(breaks = c(1, max(combinations$iterations, na.rm = TRUE))) +
         #scale_y_continuous(breaks = .custom_breaks_y) +
-        scale_color_manual(values = n_guides_col) +
+        scale_color_manual(values = n_guides_col[-1]) +
         xlab('Iterations (#)') + ylab('Off-score') +
         theme(legend.position = 'none')
   } else { 

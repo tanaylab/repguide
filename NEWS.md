@@ -1,3 +1,16 @@
+# Repguide 0.0.1.5
+
+## Bug Fixes
+* Now supports dplyr 1.0.0
+
+# Repguide 0.0.1.4
+
+## Perfomance
+* Speed enhancement for __addGuides__ function
+
+## Bug Fixes
+* Throws guides with identical sequence up to PAM before alignment
+
 # Repguide 0.0.1.3
 
 ## Bug Fixes

@@ -361,7 +361,8 @@ clustGuides <- function(guideSet,
 {
   if (alpha == Inf) { stop ('Alpha must be finite number') }
   
-  kmers <- as_tibble(guideSet@kmers) %>% filter(valid) %>% mutate(kmer_id = as.character(kmer_id))
+  kmers        <- as_tibble(guideSet@kmers) %>% filter(valid) %>% mutate(kmer_id = as.character(kmer_id))
+  n_kmers_tot  <- length(unique(kmers$kmer_id))
   combinations <- guideSet@combinations %>% unnest
   max_n_guides <- max(combinations$n_guides)
   
@@ -377,63 +378,73 @@ clustGuides <- function(guideSet,
     
     report <- foreach::foreach (nguides = 2:max_n_guides, .combine = rbind) %dopar%
     {
-      set.seed(guideSet@.seed)
-      # Get current best combination and calc stats
-      kmers_best <- combinations %>% filter(n_guides == nguides & best) %>% pull(kmer_id) %>% as.character()
-      #kmers_best <- sample(rownames(mat), nguides)
-      score_onoff_best <- qlcMatrix::rowMax(mat[, kmers_best])
-      score_on_best  <- sum(score_onoff_best[on_indeces])
-      score_off_best <- sum(score_onoff_best[off_indeces])
-      
-      # create template df
-      df <- tibble(iterations = 1:iterations,
-                   Son_tot = score_on_best,
-                   Soff_tot = score_off_best,
-                   n_guides = nguides,
-                   kmer_id = list(kmers_best))
-      
-      # Run greedy search     
-      for (i in 1:iterations)
+      if (nguides < n_kmers_tot)
       {
-        message(nguides, ' guides greedy iteration: ', i)
+        set.seed(guideSet@.seed)
+        # Get current best combination and calc stats
+        kmers_best <- combinations %>% filter(n_guides == nguides & best) %>% pull(kmer_id) %>% as.character()
+        #kmers_best <- sample(rownames(mat), nguides)
+        score_onoff_best <- qlcMatrix::rowMax(mat[, kmers_best])
+        score_on_best  <- sum(score_onoff_best[on_indeces])
+        score_off_best <- sum(score_onoff_best[off_indeces])
         
-        # Throw one kmer randomly
-        kmers_subs <- sort(sample(kmers_best, length(kmers_best) - 1))
+        # create template df
+        df <- tibble(iterations = 1:iterations,
+                     Son_tot = score_on_best,
+                     Soff_tot = score_off_best,
+                     n_guides = nguides,
+                     kmer_id = list(kmers_best))
         
-        # Score kmer subset
-        kmers_subs_score <- if (length(kmers_subs) == 1) { mat[, kmers_subs] } else { qlcMatrix::rowMax(mat[, kmers_subs]) }
-       
-        # Score delta against all kmers
-        score_delta <- mat[, !colnames(mat) %in% kmers_subs] - kmers_subs_score
-        attr(score_delta, 'x')[attr(score_delta, 'x') < 0] <- 0
-        
-        # Find and add best other kmer
-        score_on_delta  <- Matrix::colSums(score_delta[on_indeces, ])
-        score_off_delta <- Matrix::colSums(score_delta[off_indeces, ])
-        
-        kmers_new <- c(kmers_subs, names(sort(score_on_delta - score_off_delta * alpha, decreasing = TRUE)[1])) # add best kmer
-        #kmers_new <- c(kmers_subs, colnames(mat)[which.max(score_on_delta)])
-        
-        # Score new subset
-        score_onoff_new <- qlcMatrix::rowMax(mat[, kmers_new])
-        score_on_new  <- sum(score_onoff_new[on_indeces])
-        score_off_new <- sum(score_onoff_new[off_indeces])
-            
-        # Update kmers if optimized
-        if ((score_on_new / score_off_new * alpha) > (score_on_best - score_off_best * alpha))
+        # Run greedy search     
+        for (i in 1:iterations)
         {
-          kmers_best <- kmers_new
-          score_on_best <- score_on_new
-          score_off_best <- score_off_new
+          message(nguides, ' guides greedy iteration: ', i)
+          
+          # Throw one kmer randomly
+          kmers_subs <- sort(sample(kmers_best, length(kmers_best) - 1))
+          
+          # Score kmer subset
+          kmers_subs_score <- if (length(kmers_subs) == 1) { mat[, kmers_subs] } else { qlcMatrix::rowMax(mat[, kmers_subs]) }
+         
+          # Score delta against all kmers
+          score_delta <- mat[, !colnames(mat) %in% kmers_subs] - kmers_subs_score
+          attr(score_delta, 'x')[attr(score_delta, 'x') < 0] <- 0
+          
+          # Find and add best other kmer
+          if (is.null(ncol(score_delta))) # means that only 1 guide to chose from is left
+          {
+            score_on_delta  <- sum(score_delta[on_indeces])
+            score_off_delta <- sum(score_delta[off_indeces])
+          } else {
+            score_on_delta  <- Matrix::colSums(score_delta[on_indeces, ])
+            score_off_delta <- Matrix::colSums(score_delta[off_indeces, ])
+          }
+          
+          kmers_new <- c(kmers_subs, names(sort(score_on_delta - score_off_delta * alpha, decreasing = TRUE)[1])) # add best kmer
+          #kmers_new <- c(kmers_subs, colnames(mat)[which.max(score_on_delta)])
+          
+          # Score new subset
+          score_onoff_new <- qlcMatrix::rowMax(mat[, kmers_new])
+          score_on_new  <- sum(score_onoff_new[on_indeces])
+          score_off_new <- sum(score_onoff_new[off_indeces])
+              
+          # Update kmers if optimized
+          if ((score_on_new / score_off_new * alpha) > (score_on_best - score_off_best * alpha))
+          {
+            kmers_best <- kmers_new
+            score_on_best <- score_on_new
+            score_off_best <- score_off_new
+          }
+        
+        
+          # Update results df
+          df[i, 'Son_tot']            <- score_on_best
+          df[i, 'Soff_tot']           <- score_off_best
+          df[i, 'kmer_id'][[1]][[1]]  <- kmers_best
         }
-       
-        # Update results df
-        df[i, 'Son_tot']  <- score_on_best
-        df[i, 'Soff_tot'] <- score_off_best
-        df[i, 'kmer_id'][[1]][[1]]  <- kmers_best
-      }
-      
+    
       return(df)
+      }
     }
       
     #report %>% ggplot(aes(iterations, Son_tot)) + geom_point() + facet_wrap(~n_guides, scales = 'free')
